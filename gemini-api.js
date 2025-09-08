@@ -51,7 +51,7 @@ class GeminiAPI {
             }
 
             const data = await response.json();
-            
+
             if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
                 throw new Error('API返回数据格式异常');
             }
@@ -70,8 +70,8 @@ class GeminiAPI {
 
     async analyzeWebsite(websiteContent, url, contentLanguage = 'en') {
         const isEnglish = contentLanguage === 'en';
-        
-        const prompt = isEnglish ? 
+
+        const prompt = isEnglish ?
             `Analyze the following website content and extract product information. Please return in standard JSON format only, without any other text:
 
 Website URL: ${url}
@@ -84,6 +84,7 @@ Please return strictly in the following JSON format:
     "tagline": "Product tagline/slogan (concise and impactful, in English)",
     "description": "Product description (within 100 words, suitable for directory submission, in English)",
     "features": "Main product features (3-5 key features, separated by commas, in English)",
+    "category": "A single concise category for this product (e.g., Photo Editing, Project Management, AI Tool)",
     "logoUrl": "Complete URL of the website logo (if found)"
 }
 
@@ -92,6 +93,7 @@ Requirements:
 2. Information should accurately reflect the main product or service of the website
 3. All content should be in English and suitable for international directory submissions
 4. Description should be concise and practical for link building
+5. Category must be a short, general term (1-3 words), not a sentence
 5. Provide the clearest logo URL using absolute URL` :
 
             `请分析以下网站内容，提取产品信息。请务必以标准JSON格式返回，不要包含任何其他文字或格式：
@@ -106,6 +108,7 @@ Requirements:
     "tagline": "产品标语/口号（简短有力，中文）",
     "description": "产品描述（100字内，适合外链提交使用，中文）",
     "features": "主要产品功能（3-5个核心功能，用逗号分隔，中文）",
+    "category": "产品分类（尽量简短的通用类目，例如：图片处理、项目管理、AI工具）",
     "logoUrl": "网站logo的完整URL地址（如果能找到）"
 }
 
@@ -113,16 +116,17 @@ Requirements:
 1. 只返回JSON，不要任何其他文字
 2. 信息要准确反映网站的主要产品或服务
 3. 所有内容使用中文，描述要简洁实用
+4. 分类必须为简短通用类目（1-4个字），不要句子
 4. logoUrl请提供最清晰的logo地址，使用绝对URL`;
 
         try {
             const result = await this.generateContent(prompt);
-            
+
             // 尝试解析JSON
             const jsonMatch = result.text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const analysis = JSON.parse(jsonMatch[0]);
-                
+
                 // 验证返回的数据结构
                 if (typeof analysis === 'object' && analysis !== null) {
                     return {
@@ -131,13 +135,14 @@ Requirements:
                         tagline: analysis.tagline || '',
                         description: analysis.description || '',
                         features: analysis.features || '',
+                        category: analysis.category || '',
                         logoUrl: analysis.logoUrl || ''
                     };
                 }
             }
-            
+
             throw new Error('AI返回的数据格式不正确');
-            
+
         } catch (error) {
             console.error('网站分析失败:', error);
             throw new Error(`网站分析失败: ${error.message}`);
