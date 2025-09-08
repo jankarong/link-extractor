@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外链信息填充助手</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>外链信息填充助手</h1>
+            <div class="header-buttons">
+                <button class="sidebar-btn" id="sidebarBtn" title="打开全屏模式（不会自动关闭）">🖥️</button>
+                <button class="settings-btn" id="settingsBtn">⚙️</button>
+            </div>
+        </div>
+
+        <!-- 使用提示 -->
+        <div class="usage-tip">
+            <span class="tip-icon">💡</span>
+            <span class="tip-text">点击页面外会关闭弹窗，建议使用</span>
+            <button class="tip-sidebar-btn" id="tipSidebarBtn">🖥️全屏模式</button>
+        </div>
+
+        <!-- 模式选择 -->
+        <div class="mode-switch">
+            <button class="mode-btn active" id="aiModeBtn">AI分析</button>
+            <button class="mode-btn" id="manualModeBtn">手动输入</button>
+        </div>
+
+        <!-- AI模式 -->
+        <div class="input-section" id="aiMode">
+            <div class="url-input-group">
+                <input type="url" id="urlInput" placeholder="输入网站URL进行AI分析" class="url-input">
+                <button id="analyzeBtn" class="primary-btn">分析</button>
+            </div>
+        </div>
+
+        <!-- 手动模式 -->
+        <div class="input-section hidden" id="manualMode">
+            <p class="mode-tip">手动填写产品信息</p>
+        </div>
+
+        <!-- 产品信息预览区 -->
+        <div class="product-info" id="productInfo">
+            <div class="logo-section">
+                <div class="logo-container" id="logoContainer">
+                    <div class="logo-placeholder">未选择Logo</div>
+                </div>
+                <input type="file" id="logoUpload" accept="image/*" class="hidden">
+                <button id="uploadLogoBtn" class="upload-btn">上传Logo</button>
+            </div>
+
+            <div class="form-group">
+                <label for="productName" data-i18n="productName">产品名称</label>
+                <input type="text" id="productName" data-i18n="productNamePlaceholder" placeholder="输入产品名称">
+            </div>
+
+            <div class="form-group">
+                <label for="website" data-i18n="website">网站链接</label>
+                <input type="url" id="website" data-i18n="websitePlaceholder" placeholder="输入产品网站URL">
+            </div>
+
+            <div class="form-group">
+                <label for="tagline" data-i18n="tagline">标语</label>
+                <input type="text" id="tagline" data-i18n="taglinePlaceholder" placeholder="输入产品标语">
+            </div>
+
+            <div class="form-group">
+                <label for="description" data-i18n="description">描述</label>
+                <textarea id="description" data-i18n="descriptionPlaceholder" placeholder="输入产品描述" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="features" data-i18n="features">主要功能</label>
+                <textarea id="features" data-i18n="featuresPlaceholder" placeholder="输入产品的主要功能特点，用逗号分隔" rows="2"></textarea>
+            </div>
+        </div>
+
+        <!-- 操作按钮区 -->
+        <div class="action-buttons">
+            <button id="saveBtn" class="secondary-btn">保存信息</button>
+            <button id="fillBtn" class="primary-btn" disabled>一键填充</button>
+        </div>
+
+        <!-- 已保存的产品列表 -->
+        <div class="saved-products" id="savedProducts">
+            <h3>已保存的产品</h3>
+            <div class="products-list" id="productsList"></div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading hidden" id="loading">
+            <div class="spinner"></div>
+            <p>AI正在分析中...</p>
+        </div>
+
+        <!-- 消息提示 -->
+        <div class="message hidden" id="message"></div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="gemini-api.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

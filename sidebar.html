@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外链信息填充助手 - 侧边栏模式</title>
+    <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 data-i18n="title">外链信息填充助手</h1>
+            <div class="header-buttons">
+                <button class="settings-btn" id="settingsBtn">⚙️</button>
+            </div>
+        </div>
+
+        <div class="mode-info">
+            <p>📌 侧边栏模式：固定显示，不会关闭</p>
+        </div>
+
+        <!-- 模式选择 -->
+        <div class="mode-switch">
+            <button class="mode-btn active" id="aiModeBtn" data-i18n="aiMode">AI分析</button>
+            <button class="mode-btn" id="manualModeBtn" data-i18n="manualMode">手动输入</button>
+        </div>
+
+        <!-- AI模式 -->
+        <div class="input-section" id="aiMode">
+            <div class="url-input-group">
+                <input type="url" id="urlInput" data-i18n="urlPlaceholder" placeholder="输入网站URL进行AI分析" class="url-input">
+                <button id="analyzeBtn" class="primary-btn" data-i18n="analyzeBtn">分析</button>
+            </div>
+        </div>
+
+        <!-- 手动模式 -->
+        <div class="input-section hidden" id="manualMode">
+            <p class="mode-tip" data-i18n="manualTip">手动填写产品信息</p>
+        </div>
+
+        <!-- 产品信息预览区 -->
+        <div class="product-info" id="productInfo">
+            <div class="logo-section">
+                <div class="logo-container" id="logoContainer">
+                    <div class="logo-placeholder" data-i18n="noLogo">未选择Logo</div>
+                </div>
+                <input type="file" id="logoUpload" accept="image/*" class="hidden">
+                <button id="uploadLogoBtn" class="upload-btn" data-i18n="uploadLogo">上传Logo</button>
+            </div>
+
+            <div class="form-group">
+                <label for="productName" data-i18n="productName">产品名称</label>
+                <input type="text" id="productName" data-i18n="productNamePlaceholder" placeholder="输入产品名称">
+            </div>
+
+            <div class="form-group">
+                <label for="website" data-i18n="website">网站链接</label>
+                <input type="url" id="website" data-i18n="websitePlaceholder" placeholder="输入产品网站URL">
+            </div>
+
+            <div class="form-group">
+                <label for="tagline" data-i18n="tagline">标语</label>
+                <input type="text" id="tagline" data-i18n="taglinePlaceholder" placeholder="输入产品标语">
+            </div>
+
+            <div class="form-group">
+                <label for="description" data-i18n="description">描述</label>
+                <textarea id="description" data-i18n="descriptionPlaceholder" placeholder="输入产品描述" rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="features" data-i18n="features">主要功能</label>
+                <textarea id="features" data-i18n="featuresPlaceholder" placeholder="输入产品的主要功能特点，用逗号分隔" rows="2"></textarea>
+            </div>
+        </div>
+
+        <!-- 操作按钮区 -->
+        <div class="action-buttons">
+            <button id="saveBtn" class="secondary-btn" data-i18n="saveInfo">保存信息</button>
+            <button id="fillBtn" class="primary-btn" data-i18n="fillForm" disabled>一键填充</button>
+        </div>
+
+        <!-- 已保存的产品列表 -->
+        <div class="saved-products" id="savedProducts">
+            <h3 data-i18n="savedProducts">已保存的产品</h3>
+            <div class="products-list" id="productsList"></div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading hidden" id="loading">
+            <div class="spinner"></div>
+            <p data-i18n="analyzing">AI正在分析中...</p>
+        </div>
+
+        <!-- 消息提示 -->
+        <div class="message hidden" id="message"></div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="gemini-api.js"></script>
+    <script src="popup.js"></script>
+    <script src="sidebar.js"></script>
+</body>
+</html>

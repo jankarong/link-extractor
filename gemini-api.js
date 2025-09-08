@@ -1,0 +1,162 @@
+// 简化的Gemini API客户端，适用于Chrome扩展
+class GeminiAPI {
+    constructor(apiKey) {
+        this.apiKey = apiKey;
+        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+    }
+
+    async generateContent(prompt, model = 'gemini-1.5-flash') {
+        try {
+            const response = await fetch(`${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 1024,
+                    },
+                    safetySettings: [
+                        {
+                            category: "HARM_CATEGORY_HARASSMENT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_HATE_SPEECH",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`API请求失败: ${response.status} - ${errorData.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                throw new Error('API返回数据格式异常');
+            }
+
+            const content = data.candidates[0].content.parts[0].text;
+            return {
+                text: content,
+                raw: data
+            };
+
+        } catch (error) {
+            console.error('Gemini API调用失败:', error);
+            throw error;
+        }
+    }
+
+    async analyzeWebsite(websiteContent, url, contentLanguage = 'en') {
+        const isEnglish = contentLanguage === 'en';
+        
+        const prompt = isEnglish ? 
+            `Analyze the following website content and extract product information. Please return in standard JSON format only, without any other text:
+
+Website URL: ${url}
+Website content: ${websiteContent.substring(0, 4000)}
+
+Please return strictly in the following JSON format:
+{
+    "productName": "Product name (in English)",
+    "website": "Main product/company website URL",
+    "tagline": "Product tagline/slogan (concise and impactful, in English)",
+    "description": "Product description (within 100 words, suitable for directory submission, in English)",
+    "features": "Main product features (3-5 key features, separated by commas, in English)",
+    "logoUrl": "Complete URL of the website logo (if found)"
+}
+
+Requirements:
+1. Return JSON only, no other text
+2. Information should accurately reflect the main product or service of the website
+3. All content should be in English and suitable for international directory submissions
+4. Description should be concise and practical for link building
+5. Provide the clearest logo URL using absolute URL` :
+
+            `请分析以下网站内容，提取产品信息。请务必以标准JSON格式返回，不要包含任何其他文字或格式：
+
+网站URL: ${url}
+网站内容: ${websiteContent.substring(0, 4000)}
+
+请严格按照以下JSON格式返回：
+{
+    "productName": "产品名称（中文）",
+    "website": "主要产品/公司网站URL",
+    "tagline": "产品标语/口号（简短有力，中文）",
+    "description": "产品描述（100字内，适合外链提交使用，中文）",
+    "features": "主要产品功能（3-5个核心功能，用逗号分隔，中文）",
+    "logoUrl": "网站logo的完整URL地址（如果能找到）"
+}
+
+要求：
+1. 只返回JSON，不要任何其他文字
+2. 信息要准确反映网站的主要产品或服务
+3. 所有内容使用中文，描述要简洁实用
+4. logoUrl请提供最清晰的logo地址，使用绝对URL`;
+
+        try {
+            const result = await this.generateContent(prompt);
+            
+            // 尝试解析JSON
+            const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                const analysis = JSON.parse(jsonMatch[0]);
+                
+                // 验证返回的数据结构
+                if (typeof analysis === 'object' && analysis !== null) {
+                    return {
+                        productName: analysis.productName || '',
+                        website: analysis.website || url, // 如果AI没有返回，使用输入的URL
+                        tagline: analysis.tagline || '',
+                        description: analysis.description || '',
+                        features: analysis.features || '',
+                        logoUrl: analysis.logoUrl || ''
+                    };
+                }
+            }
+            
+            throw new Error('AI返回的数据格式不正确');
+            
+        } catch (error) {
+            console.error('网站分析失败:', error);
+            throw new Error(`网站分析失败: ${error.message}`);
+        }
+    }
+
+    async testConnection() {
+        try {
+            const result = await this.generateContent('请回复"连接成功"四个字');
+            return result.text.includes('连接成功') || result.text.includes('成功');
+        } catch (error) {
+            throw new Error(`API连接测试失败: ${error.message}`);
+        }
+    }
+}
+
+// 导出给其他文件使用
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = GeminiAPI;
+} else if (typeof window !== 'undefined') {
+    window.GeminiAPI = GeminiAPI;
+}

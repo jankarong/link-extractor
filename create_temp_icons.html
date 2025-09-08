@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>创建临时图标</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .icon { margin: 10px; display: inline-block; }
+        canvas { border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h2>Chrome插件临时图标生成器</h2>
+    <p>点击下载按钮保存图标到icons文件夹</p>
+    
+    <div class="icon">
+        <h3>16x16 图标</h3>
+        <canvas id="icon16" width="16" height="16"></canvas>
+        <br><button onclick="download('icon16', 'icon16.png')">下载 icon16.png</button>
+    </div>
+    
+    <div class="icon">
+        <h3>48x48 图标</h3>
+        <canvas id="icon48" width="48" height="48"></canvas>
+        <br><button onclick="download('icon48', 'icon48.png')">下载 icon48.png</button>
+    </div>
+    
+    <div class="icon">
+        <h3>128x128 图标</h3>
+        <canvas id="icon128" width="128" height="128"></canvas>
+        <br><button onclick="download('icon128', 'icon128.png')">下载 icon128.png</button>
+    </div>
+
+    <script>
+        function createIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // 蓝色背景
+            ctx.fillStyle = '#1a73e8';
+            ctx.fillRect(0, 0, size, size);
+            
+            // 白色文字 "L"
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${Math.floor(size * 0.6)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('L', size/2, size/2);
+        }
+        
+        function download(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // 创建图标
+        createIcon('icon16', 16);
+        createIcon('icon48', 48);  
+        createIcon('icon128', 128);
+    </script>
+</body>
+</html>

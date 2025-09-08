@@ -1,0 +1,501 @@
+/* 全屏模式CSS - 基于popup.css但优化为全屏显示 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #333;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    background: linear-gradient(135deg, #1a73e8, #4285f4);
+    color: white;
+}
+
+.header h1 {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.settings-btn,
+.back-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    color: white;
+}
+
+.settings-btn:hover,
+.back-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.1);
+}
+
+/* 全屏模式提示信息 */
+.mode-info {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    padding: 20px 32px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.mode-info p {
+    font-size: 14px;
+    color: #1565c0;
+    margin: 0 0 8px 0;
+}
+
+.mode-info .tip {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+}
+
+/* 主要内容区域 */
+.container > *:not(.header):not(.mode-info) {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+/* 模式切换 */
+.mode-switch {
+    display: flex;
+    background-color: #e8f0fe;
+    border-radius: 12px;
+    padding: 6px;
+    margin: 24px 32px;
+    max-width: 300px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.mode-btn.active {
+    background-color: #1a73e8;
+    color: white;
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+}
+
+.mode-btn:not(.active):hover {
+    background-color: rgba(26, 115, 232, 0.1);
+}
+
+/* 输入区域 */
+.input-section {
+    margin-bottom: 24px;
+}
+
+.url-input-group {
+    display: flex;
+    gap: 12px;
+    max-width: 600px;
+}
+
+.url-input {
+    flex: 1;
+    padding: 14px 16px;
+    border: 2px solid #dadce0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.url-input:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.mode-tip {
+    color: #666;
+    text-align: center;
+    font-style: italic;
+    font-size: 16px;
+    padding: 20px;
+}
+
+/* 按钮样式 */
+.primary-btn {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.2);
+}
+
+.primary-btn:hover:not(:disabled) {
+    background-color: #1557b0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+.primary-btn:disabled {
+    background-color: #dadce0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.secondary-btn {
+    background-color: white;
+    color: #1a73e8;
+    border: 2px solid #dadce0;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #1a73e8;
+    transform: translateY(-1px);
+}
+
+.upload-btn {
+    background-color: #f8f9fa;
+    color: #666;
+    border: 1px solid #dadce0;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* 产品信息区 */
+.product-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    background-color: #fafafa;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid #e0e0e0;
+}
+
+.logo-section {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.logo-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px dashed #dadce0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-placeholder {
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+    padding: 8px;
+}
+
+.logo-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #444;
+    font-size: 13px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #dadce0;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+/* 操作按钮 */
+.action-buttons {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+    justify-content: center;
+}
+
+.action-buttons button {
+    min-width: 150px;
+}
+
+/* 已保存产品列表 */
+.saved-products {
+    background-color: #fafafa;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 32px;
+}
+
+.saved-products h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #333;
+}
+
+.products-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.product-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    background-color: white;
+}
+
+.product-item:hover {
+    border-color: #1a73e8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.product-item-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.product-item-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.product-item-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.product-item-tagline {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.product-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.product-item-actions button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.product-item-actions button:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.2);
+}
+
+/* 加载状态 */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #1a73e8;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 消息提示 */
+.message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-width: 400px;
+}
+
+.message.success {
+    background-color: #e8f5e8;
+    color: #2e7d2e;
+    border: 1px solid #4caf50;
+}
+
+.message.error {
+    background-color: #ffeaea;
+    color: #d32f2f;
+    border: 1px solid #f44336;
+}
+
+/* 工具类 */
+.hidden {
+    display: none !important;
+}
+
+/* 滚动条样式 */
+.products-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.products-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.products-list::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 4px;
+}
+
+.products-list::-webkit-scrollbar-thumb:hover {
+    background: #bbb;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+    .product-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .products-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        margin: 10px;
+        border-radius: 8px;
+    }
+    
+    .header {
+        padding: 16px 20px;
+    }
+    
+    .container > *:not(.header):not(.mode-info) {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    
+    .mode-switch {
+        margin: 16px 20px;
+    }
+    
+    .url-input-group {
+        flex-direction: column;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+}
