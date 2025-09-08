@@ -8,13 +8,13 @@ class OptionsManager {
             interfaceLanguage: 'zh',
             contentLanguage: 'en'
         };
-        
+
         this.stats = {
             totalAnalyses: 0,
             totalFills: 0,
             savedProducts: 0
         };
-        
+
         this.init();
     }
 
@@ -35,7 +35,7 @@ class OptionsManager {
             // 实时保存API Key（无提示）
             this.saveApiKey();
         });
-        
+
         // 设置选项
         document.getElementById('enableAutoFill').addEventListener('change', (e) => {
             this.settings.enableAutoFill = e.target.checked;
@@ -49,38 +49,38 @@ class OptionsManager {
             this.settings.enableDebugMode = e.target.checked;
             this.saveSettings();
         });
-        
+
         // 语言设置
         document.getElementById('interfaceLanguage').addEventListener('change', async (e) => {
             this.settings.interfaceLanguage = e.target.value;
             this.saveSettings();
-            
+
             // 更新语言管理器并刷新界面
             if (window.langManager) {
                 await window.langManager.setInterfaceLanguage(e.target.value);
                 window.langManager.updatePageTexts();
             }
         });
-        
+
         document.getElementById('contentLanguage').addEventListener('change', (e) => {
             this.settings.contentLanguage = e.target.value;
             this.saveSettings();
-            
+
             // 更新语言管理器
             if (window.langManager) {
                 window.langManager.setContentLanguage(e.target.value);
             }
         });
-        
+
         // 数据管理
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
         document.getElementById('importData').addEventListener('click', () => this.importData());
         document.getElementById('importFile').addEventListener('change', (e) => this.handleImportFile(e));
         document.getElementById('clearData').addEventListener('click', () => this.clearAllData());
-        
+
         // 页脚按钮
         document.getElementById('resetSettings').addEventListener('click', () => this.resetSettings());
-        
+
         // 关于链接
         document.getElementById('helpLink').addEventListener('click', (e) => {
             e.preventDefault();
@@ -106,7 +106,7 @@ class OptionsManager {
                 'interfaceLanguage',
                 'contentLanguage'
             ]);
-            
+
             this.settings = {
                 geminiApiKey: result.geminiApiKey || '',
                 enableAutoFill: result.enableAutoFill !== false,
@@ -127,11 +127,11 @@ class OptionsManager {
                 'totalFills',
                 'savedProducts'
             ]);
-            
+
             // 获取保存的产品数量
             const productsResult = await chrome.storage.local.get(['savedProducts']);
             const savedProducts = productsResult.savedProducts || [];
-            
+
             this.stats = {
                 totalAnalyses: result.totalAnalyses || 0,
                 totalFills: result.totalFills || 0,
@@ -150,7 +150,7 @@ class OptionsManager {
         document.getElementById('enableDebugMode').checked = this.settings.enableDebugMode;
         document.getElementById('interfaceLanguage').value = this.settings.interfaceLanguage;
         document.getElementById('contentLanguage').value = this.settings.contentLanguage;
-        
+
         // 更新统计UI
         document.getElementById('totalAnalyses').textContent = this.stats.totalAnalyses;
         document.getElementById('totalFills').textContent = this.stats.totalFills;
@@ -160,7 +160,7 @@ class OptionsManager {
     toggleApiKeyVisibility() {
         const apiKeyInput = document.getElementById('apiKey');
         const toggleBtn = document.getElementById('toggleApiKey');
-        
+
         if (apiKeyInput.type === 'password') {
             apiKeyInput.type = 'text';
             toggleBtn.textContent = '🙈';
@@ -172,27 +172,27 @@ class OptionsManager {
 
     async testApiConnection() {
         const apiKey = this.settings.geminiApiKey.trim();
-        
+
         if (!apiKey) {
             this.showApiStatus('请先输入API Key', 'error');
             return;
         }
 
         this.showLoading(true, '测试API连接中...');
-        
+
         try {
             const gemini = new GeminiAPI(apiKey);
             const isConnected = await gemini.testConnection();
-            
+
             if (isConnected) {
                 this.showApiStatus('✅ API连接成功！可以正常使用AI分析功能', 'success');
             } else {
                 this.showApiStatus('❌ API响应异常，请检查API Key是否正确', 'error');
             }
-            
+
         } catch (error) {
             console.error('API测试失败:', error);
-            
+
             if (error.message.includes('400')) {
                 this.showApiStatus('❌ API Key无效或请求格式错误', 'error');
             } else if (error.message.includes('403')) {
@@ -219,7 +219,7 @@ class OptionsManager {
 
     async saveApiKeyWithMessage() {
         const apiKey = this.settings.geminiApiKey.trim();
-        
+
         if (!apiKey) {
             this.showMessage('请先输入API Key', 'error');
             return;
@@ -241,7 +241,7 @@ class OptionsManager {
         statusEl.textContent = message;
         statusEl.className = `api-status ${type}`;
         statusEl.classList.remove('hidden');
-        
+
         // 5秒后自动隐藏
         setTimeout(() => {
             statusEl.classList.add('hidden');
@@ -252,7 +252,7 @@ class OptionsManager {
         try {
             const result = await chrome.storage.local.get(['savedProducts']);
             const savedProducts = result.savedProducts || [];
-            
+
             if (savedProducts.length === 0) {
                 this.showMessage('没有数据可导出', 'info');
                 return;
@@ -266,7 +266,7 @@ class OptionsManager {
 
             const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = `link-extractor-data-${new Date().toISOString().split('T')[0]}.json`;
@@ -274,7 +274,7 @@ class OptionsManager {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             this.showMessage('数据导出成功！', 'success');
         } catch (error) {
             console.error('导出数据失败:', error);
@@ -293,7 +293,7 @@ class OptionsManager {
         try {
             const text = await file.text();
             const importData = JSON.parse(text);
-            
+
             // 验证数据格式
             if (!importData.products || !Array.isArray(importData.products)) {
                 throw new Error('无效的数据格式');
@@ -305,30 +305,30 @@ class OptionsManager {
 
             // 保存导入的数据
             await chrome.storage.local.set({ savedProducts: importData.products });
-            
+
             // 更新统计
             await this.loadStats();
             this.updateUI();
-            
+
             this.showMessage(`成功导入 ${importData.products.length} 个产品！`, 'success');
-            
+
         } catch (error) {
             console.error('导入数据失败:', error);
             this.showMessage('导入失败，请检查文件格式是否正确', 'error');
         }
-        
+
         // 清空文件输入
         event.target.value = '';
     }
 
     async clearAllData() {
         const confirmMessage = '⚠️ 确定要清除所有数据吗？\n\n这将删除：\n• 所有保存的产品信息\n• 使用统计数据\n\n此操作不可恢复！';
-        
+
         if (!confirm(confirmMessage)) return;
 
         try {
             await chrome.storage.local.clear();
-            
+
             // 重新设置默认值
             this.settings = {
                 geminiApiKey: '',
@@ -336,16 +336,16 @@ class OptionsManager {
                 enableLogoUpload: true,
                 enableDebugMode: false
             };
-            
+
             this.stats = {
                 totalAnalyses: 0,
                 totalFills: 0,
                 savedProducts: 0
             };
-            
+
             this.updateUI();
             this.showMessage('所有数据已清除！', 'success');
-            
+
         } catch (error) {
             console.error('清除数据失败:', error);
             this.showMessage('清除数据失败，请重试', 'error');
@@ -361,7 +361,7 @@ class OptionsManager {
             enableLogoUpload: true,
             enableDebugMode: false
         };
-        
+
         this.updateUI();
         this.showMessage('设置已重置为默认值', 'success');
     }
@@ -376,7 +376,7 @@ class OptionsManager {
                 interfaceLanguage: this.settings.interfaceLanguage,
                 contentLanguage: this.settings.contentLanguage
             });
-            
+
             if (showMessage) {
                 this.showMessage('设置保存成功！', 'success');
             }
@@ -414,7 +414,7 @@ class OptionsManager {
    - 查看已保存的产品列表
    - 导出/导入数据进行备份和迁移
         `;
-        
+
         alert(helpText);
     }
 
@@ -430,7 +430,7 @@ class OptionsManager {
 
 您的反馈有助于我们改进产品！
         `;
-        
+
         alert(feedbackText);
     }
 
@@ -443,7 +443,7 @@ class OptionsManager {
         messageEl.textContent = text;
         messageEl.className = `message ${type}`;
         messageEl.classList.remove('hidden');
-        
+
         setTimeout(() => {
             messageEl.classList.add('hidden');
         }, 4000);
@@ -463,4 +463,18 @@ class OptionsManager {
 // 初始化选项管理器
 document.addEventListener('DOMContentLoaded', () => {
     new OptionsManager();
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const from = params.get('from');
+        const backBtn = document.getElementById('backToSidepanel');
+        if (from === 'sidepanel' && backBtn) {
+            backBtn.style.display = 'inline-block';
+            backBtn.addEventListener('click', () => {
+                const sidepanelUrl = chrome.runtime.getURL('sidepanel.html');
+                window.location.href = sidepanelUrl;
+            });
+        }
+    } catch (e) {
+        console.error('处理返回侧边栏按钮失败:', e);
+    }
 });
