@@ -508,15 +508,34 @@ class LinkExtractorPopup {
 
     async openSidebar() {
         try {
-            // 直接使用全屏模式，因为它更稳定可靠
-            console.log('正在打开全屏模式...');
+            // 优先使用侧边栏模式
+            console.log('正在打开侧边栏模式...');
             
+            try {
+                // 尝试打开侧边栏
+                await chrome.sidePanel.open({ windowId: (await chrome.windows.getCurrent()).id });
+                this.showMessage('侧边栏模式已打开！', 'success');
+                
+                // 1秒后关闭popup
+                setTimeout(() => {
+                    try {
+                        window.close();
+                    } catch (closeError) {
+                        console.log('popup关闭失败，这是正常的:', closeError);
+                    }
+                }, 1000);
+                return;
+            } catch (sidebarError) {
+                console.log('侧边栏API不可用，尝试全屏模式...', sidebarError);
+            }
+            
+            // 如果侧边栏失败，回退到全屏模式
+            console.log('正在打开全屏模式...');
             const fullscreenUrl = chrome.runtime.getURL('fullscreen.html');
             const tab = await chrome.tabs.create({ url: fullscreenUrl });
             
             if (tab && tab.id) {
-                // 显示提示信息
-                this.showMessage('全屏模式已打开！现在可以关闭这个弹窗了', 'success');
+                this.showMessage('已在新标签页打开！现在可以关闭这个弹窗了', 'success');
                 
                 // 1.5秒后自动关闭popup
                 setTimeout(() => {
@@ -531,10 +550,10 @@ class LinkExtractorPopup {
             }
             
         } catch (error) {
-            console.error('打开全屏模式失败:', error);
+            console.error('打开界面失败:', error);
             
             // 提供备用方案提示
-            let errorMessage = '打开全屏模式失败';
+            let errorMessage = '打开界面失败';
             if (error.message.includes('Chrome API')) {
                 errorMessage += '：浏览器API不可用';
             } else if (error.message.includes('权限')) {

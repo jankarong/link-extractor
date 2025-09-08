@@ -200,10 +200,15 @@ async function getContentViaContentScript(url) {
     });
 }
 
-// 处理扩展图标点击
-chrome.action.onClicked.addListener((tab) => {
-    // 打开popup（这个在manifest中已经配置了，这里只是备用）
-    chrome.action.openPopup();
+// 处理扩展图标点击 - 优先打开侧边栏
+chrome.action.onClicked.addListener(async (tab) => {
+    try {
+        // 优先尝试打开侧边栏
+        await chrome.sidePanel.open({ windowId: tab.windowId });
+    } catch (error) {
+        console.log('无法打开侧边栏，使用默认popup:', error);
+        // 如果无法打开侧边栏，会回退到manifest中配置的popup
+    }
 });
 
 // 监听存储变化，用于调试
