@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "外链信息自动填充助手",
+  "name": "Link Extractor Assistant",
   "version": "1.0.0",
-  "description": "使用AI自动分析网站信息并一键填充外链表单的Chrome插件",
+  "description": "Chrome extension that uses AI to analyze websites and auto-fill link submission forms",
   "permissions": [
     "storage",
     "activeTab",
@@ -31,7 +31,7 @@
     }
   ],
   "action": {
-    "default_title": "外链信息填充助手"
+    "default_title": "Link Extractor Assistant"
   },
   "options_page": "options.html",
   "side_panel": {

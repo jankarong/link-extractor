@@ -1,4 +1,4 @@
-// 简化的Gemini API客户端，适用于Chrome扩展
+// Simplified Gemini API client for Chrome extensions
 class GeminiAPI {
     constructor(apiKey) {
         this.apiKey = apiKey;
@@ -47,13 +47,13 @@ class GeminiAPI {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(`API请求失败: ${response.status} - ${errorData.error?.message || response.statusText}`);
+                throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || response.statusText}`);
             }
 
             const data = await response.json();
 
             if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-                throw new Error('API返回数据格式异常');
+                throw new Error('API returned invalid data format');
             }
 
             const content = data.candidates[0].content.parts[0].text;
@@ -63,7 +63,7 @@ class GeminiAPI {
             };
 
         } catch (error) {
-            console.error('Gemini API调用失败:', error);
+            console.error('Gemini API call failed:', error);
             throw error;
         }
     }
@@ -85,6 +85,7 @@ Please return strictly in the following JSON format:
     "description": "Product description (within 100 words, suitable for directory submission, in English)",
     "features": "Main product features (3-5 key features, separated by commas, in English)",
     "category": "A single concise category for this product (e.g., Photo Editing, Project Management, AI Tool)",
+    "comment": "Brief casual explanation of why this product should be recommended (1-2 sentences, natural tone, in English)",
     "logoUrl": "Complete URL of the website logo (if found)"
 }
 
@@ -109,6 +110,7 @@ Requirements:
     "description": "产品描述（100字内，适合外链提交使用，中文）",
     "features": "主要产品功能（3-5个核心功能，用逗号分隔，中文）",
     "category": "产品分类（尽量简短的通用类目，例如：图片处理、项目管理、AI工具）",
+    "comment": "简单说明为什么推荐这个产品（1-2句话，语气轻松自然，中文）",
     "logoUrl": "网站logo的完整URL地址（如果能找到）"
 }
 
@@ -122,44 +124,45 @@ Requirements:
         try {
             const result = await this.generateContent(prompt);
 
-            // 尝试解析JSON
+            // Try to parse JSON
             const jsonMatch = result.text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const analysis = JSON.parse(jsonMatch[0]);
 
-                // 验证返回的数据结构
+                // Validate returned data structure
                 if (typeof analysis === 'object' && analysis !== null) {
                     return {
                         productName: analysis.productName || '',
-                        website: analysis.website || url, // 如果AI没有返回，使用输入的URL
+                        website: analysis.website || url, // If AI doesn't return, use input URL
                         tagline: analysis.tagline || '',
                         description: analysis.description || '',
                         features: analysis.features || '',
                         category: analysis.category || '',
+                        comment: analysis.comment || '',
                         logoUrl: analysis.logoUrl || ''
                     };
                 }
             }
 
-            throw new Error('AI返回的数据格式不正确');
+            throw new Error('AI returned invalid data format');
 
         } catch (error) {
-            console.error('网站分析失败:', error);
-            throw new Error(`网站分析失败: ${error.message}`);
+            console.error('Website analysis failed:', error);
+            throw new Error(`Website analysis failed: ${error.message}`);
         }
     }
 
     async testConnection() {
         try {
-            const result = await this.generateContent('请回复"连接成功"四个字');
-            return result.text.includes('连接成功') || result.text.includes('成功');
+            const result = await this.generateContent('Please reply with "Connection successful"');
+            return result.text.includes('Connection successful') || result.text.includes('successful');
         } catch (error) {
-            throw new Error(`API连接测试失败: ${error.message}`);
+            throw new Error(`API connection test failed: ${error.message}`);
         }
     }
 }
 
-// 导出给其他文件使用
+// Export for use by other files
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = GeminiAPI;
 } else if (typeof window !== 'undefined') {

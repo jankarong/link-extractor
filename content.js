@@ -1,14 +1,14 @@
 // Content Script for Link Extractor Chrome Extension
-// 负责在网页中自动填充表单
+// Responsible for automatically filling forms on web pages
 
 class FormFiller {
     constructor() {
-        this.debug = true; // 暂时启用调试信息来帮助排查问题
+        this.debug = true; // Temporarily enable debug information to help troubleshoot issues
         this.init();
     }
 
     init() {
-        // 监听来自popup的消息
+        // Listen to messages from popup
         chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             if (request.action === 'fillForm') {
                 this.fillForm(request.data);
@@ -17,45 +17,46 @@ class FormFiller {
                 const content = this.extractPageContent();
                 sendResponse({ success: true, content });
             }
-            
-            return true; // 保持消息通道开放
+
+            return true; // Keep message channel open
         });
 
         if (this.debug) {
-            console.log('外链填充助手 Content Script 已加载');
-            console.log('使用 window.testFormFields() 来测试字段识别');
-            
-            // 暴露测试方法到全局作用域
+            console.log('Link Extractor Content Script loaded');
+            console.log('Use window.testFormFields() to test field recognition');
+
+            // Expose test method to global scope
             window.testFormFields = () => {
                 const fields = this.findFormFields();
-                console.log('=== 表单字段识别测试 ===');
-                console.log('产品名称字段:', fields.name.length, '个');
-                console.log('网站URL字段:', fields.website.length, '个');
-                console.log('标语字段:', fields.tagline.length, '个');
-                console.log('描述字段:', fields.description.length, '个');
-                console.log('功能字段:', fields.features.length, '个');
-                console.log('Logo字段:', fields.logo.length, '个');
-                console.log('详细信息:', fields);
+                console.log('=== Form Field Recognition Test ===');
+                console.log('Product name fields:', fields.name.length, 'found');
+                console.log('Website URL fields:', fields.website.length, 'found');
+                console.log('Tagline fields:', fields.tagline.length, 'found');
+                console.log('Description fields:', fields.description.length, 'found');
+                console.log('Feature fields:', fields.features.length, 'found');
+                console.log('Comment fields:', fields.comment.length, 'found');
+                console.log('Logo fields:', fields.logo.length, 'found');
+                console.log('Detailed information:', fields);
                 return fields;
             };
         }
     }
 
     /**
-     * 填充表单
-     * @param {Object} data 要填充的数据
+     * Fill form
+     * @param {Object} data Data to fill
      */
     fillForm(data) {
         try {
             const fields = this.findFormFields();
-            
+
             if (this.debug) {
-                console.log('=== 外链填充助手调试信息 ===');
-                console.log('找到的表单字段:', fields);
-                console.log('要填充的数据:', data);
-                console.log('网站URL字段数量:', fields.website.length);
+                console.log('=== Link Extractor Debug Information ===');
+                console.log('Found form fields:', fields);
+                console.log('Data to fill:', data);
+                console.log('Website URL field count:', fields.website.length);
                 if (fields.website.length > 0) {
-                    console.log('网站URL字段详情:', fields.website.map(el => ({
+                    console.log('Website URL field details:', fields.website.map(el => ({
                         tagName: el.tagName,
                         name: el.name,
                         id: el.id,
@@ -67,54 +68,68 @@ class FormFiller {
                 console.log('==============================');
             }
 
-            // 填充产品名称
+            // Fill product name
             if (data.productName) {
                 this.fillField(fields.name, data.productName);
             }
 
-            // 填充网站URL
+            // Fill website URL
             if (data.website) {
                 if (this.debug) {
-                    console.log(`尝试填充网站URL: ${data.website} 到 ${fields.website.length} 个字段`);
+                    console.log(`Attempting to fill website URL: ${data.website} to ${fields.website.length} fields`);
                 }
                 this.fillField(fields.website, data.website);
             }
 
-            // 填充标语
+            // Fill tagline
             if (data.tagline) {
                 this.fillField(fields.tagline, data.tagline);
             }
 
-            // 填充描述
+            // Fill description
             if (data.description) {
                 this.fillField(fields.description, data.description);
             }
 
-            // 填充功能特点
+            // Fill features
             if (data.features) {
                 this.fillField(fields.features, data.features);
             }
 
-            // 处理logo
+            // Fill comment
+            if (data.comment) {
+                this.fillField(fields.comment, data.comment);
+            }
+
+            // Handle logo
             if (data.logo) {
                 this.handleLogoUpload(fields.logo, data.logo);
             }
 
-            // 触发change事件以确保网站检测到变化
+            // Handle webpage screenshot (as general image upload)
+            if (data.screenshot) {
+                // Prioritize uploading screenshot as image/cover
+                const imageInputs = Array.from(document.querySelectorAll('input[type="file"][accept*="image"], input[type="file"][name*="image" i], input[type="file"][id*="image" i], input[type="file"][name*="screenshot" i], input[type="file"][id*="screenshot" i]'));
+                if (imageInputs.length > 0) {
+                    this.handleLogoUpload(imageInputs, data.screenshot);
+                }
+            }
+
+            // Trigger change events to ensure website detects changes
             this.triggerChangeEvents(fields);
 
             if (this.debug) {
-                console.log('表单填充完成');
+                console.log('Form filling completed');
             }
 
         } catch (error) {
-            console.error('填充表单时发生错误:', error);
+            console.error('Error occurred while filling form:', error);
         }
     }
 
     /**
-     * 查找页面中的表单字段
-     * @returns {Object} 包含各类字段的对象
+     * Find form fields in the page
+     * @returns {Object} Object containing various field types
      */
     findFormFields() {
         const fields = {
@@ -123,10 +138,11 @@ class FormFiller {
             tagline: [],
             description: [],
             features: [],
+            comment: [],
             logo: []
         };
 
-        // 产品名称字段的可能选择器
+        // Possible selectors for product name fields
         const nameSelectors = [
             'input[name*="name" i]',
             'input[placeholder*="name" i]',
@@ -141,63 +157,63 @@ class FormFiller {
             'input[aria-label*="title" i]'
         ];
 
-        // 网站URL字段的可能选择器
+        // Possible selectors for website URL fields
         const websiteSelectors = [
-            // 基础URL字段
+            // Basic URL fields
             'input[type="url"]',
             'input[name*="url" i]',
             'input[placeholder*="url" i]',
             'input[id*="url" i]',
             'input[class*="url" i]',
-            
-            // 网站相关字段
+
+            // Website related fields
             'input[name*="website" i]',
             'input[placeholder*="website" i]',
             'input[id*="website" i]',
             'input[class*="website" i]',
-            
-            // 站点相关字段
+
+            // Site related fields
             'input[name*="site" i]',
             'input[placeholder*="site" i]',
             'input[id*="site" i]',
             'input[class*="site" i]',
-            
-            // 链接相关字段
+
+            // Link related fields
             'input[name*="link" i]',
             'input[placeholder*="link" i]',
             'input[id*="link" i]',
             'input[class*="link" i]',
-            
-            // 域名相关字段
+
+            // Domain related fields
             'input[name*="domain" i]',
             'input[placeholder*="domain" i]',
             'input[id*="domain" i]',
             'input[class*="domain" i]',
-            
-            // 主页相关字段
+
+            // Homepage related fields
             'input[name*="homepage" i]',
             'input[placeholder*="homepage" i]',
             'input[id*="homepage" i]',
             'input[name*="home" i]',
             'input[placeholder*="home" i]',
             'input[id*="home" i]',
-            
-            // Web相关字段
+
+            // Web related fields
             'input[name*="web" i]',
             'input[placeholder*="web" i]',
             'input[id*="web" i]',
-            
-            // HTTP相关字段
+
+            // HTTP related fields
             'input[name*="http" i]',
             'input[placeholder*="http" i]',
             'input[id*="http" i]',
-            
-            // 项目相关字段
+
+            // Project related fields
             'input[name*="project" i]',
             'input[placeholder*="project" i]',
             'input[id*="project" i]',
-            
-            // Accessibility标签
+
+            // Accessibility labels
             'input[aria-label*="url" i]',
             'input[aria-label*="website" i]',
             'input[aria-label*="link" i]',
@@ -205,7 +221,7 @@ class FormFiller {
             'input[aria-label*="domain" i]'
         ];
 
-        // 标语字段的可能选择器
+        // Possible selectors for tagline fields
         const taglineSelectors = [
             'input[name*="tagline" i]',
             'input[placeholder*="tagline" i]',
@@ -222,7 +238,7 @@ class FormFiller {
             'input[aria-label*="slogan" i]'
         ];
 
-        // 描述字段的可能选择器
+        // Possible selectors for description fields
         const descriptionSelectors = [
             'textarea[name*="description" i]',
             'textarea[placeholder*="description" i]',
@@ -240,14 +256,14 @@ class FormFiller {
             'input[name*="description" i]',
             'input[placeholder*="description" i]',
             'input[id*="description" i]',
-            // 富文本编辑器
+            // Rich text editors
             '[contenteditable="true"]',
-            '.ql-editor', // Quill编辑器
-            '.fr-element', // Froala编辑器
-            '.note-editable' // Summernote编辑器
+            '.ql-editor', // Quill editor
+            '.fr-element', // Froala editor
+            '.note-editable' // Summernote editor
         ];
 
-        // 功能特点字段的可能选择器
+        // Possible selectors for feature fields
         const featuresSelectors = [
             'textarea[name*="feature" i]',
             'textarea[placeholder*="feature" i]',
@@ -271,7 +287,37 @@ class FormFiller {
             'input[aria-label*="feature" i]'
         ];
 
-        // Logo上传字段的可能选择器
+        // Possible selectors for comment fields
+        const commentSelectors = [
+            'textarea[name*="comment" i]',
+            'textarea[placeholder*="comment" i]',
+            'textarea[id*="comment" i]',
+            'input[name*="comment" i]',
+            'input[placeholder*="comment" i]',
+            'input[id*="comment" i]',
+            'textarea[name*="note" i]',
+            'textarea[placeholder*="note" i]',
+            'textarea[id*="note" i]',
+            'input[name*="note" i]',
+            'input[placeholder*="note" i]',
+            'input[id*="note" i]',
+            'textarea[name*="reason" i]',
+            'textarea[placeholder*="reason" i]',
+            'textarea[id*="reason" i]',
+            'textarea[name*="why" i]',
+            'textarea[placeholder*="why" i]',
+            'textarea[id*="why" i]',
+            'textarea[name*="explain" i]',
+            'textarea[placeholder*="explain" i]',
+            'textarea[id*="explain" i]',
+            'textarea[name*="message" i]',
+            'textarea[placeholder*="message" i]',
+            'textarea[id*="message" i]',
+            'textarea[aria-label*="comment" i]',
+            'input[aria-label*="comment" i]'
+        ];
+
+        // Possible selectors for logo upload fields
         const logoSelectors = [
             'input[type="file"][name*="logo" i]',
             'input[type="file"][id*="logo" i]',
@@ -285,7 +331,7 @@ class FormFiller {
             'input[type="file"][aria-label*="image" i]'
         ];
 
-        // 收集所有匹配的字段
+        // Collect all matching fields
         nameSelectors.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(el => {
@@ -331,6 +377,15 @@ class FormFiller {
             });
         });
 
+        commentSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (this.isVisible(el) && !this.isDisabled(el)) {
+                    fields.comment.push(el);
+                }
+            });
+        });
+
         logoSelectors.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(el => {
@@ -340,7 +395,7 @@ class FormFiller {
             });
         });
 
-        // 去重
+        // Remove duplicates
         Object.keys(fields).forEach(key => {
             fields[key] = [...new Set(fields[key])];
         });
@@ -349,9 +404,9 @@ class FormFiller {
     }
 
     /**
-     * 填充字段
-     * @param {Array} elements 要填充的元素数组
-     * @param {string} value 要填充的值
+     * Fill fields
+     * @param {Array} elements Array of elements to fill
+     * @param {string} value Value to fill
      */
     fillField(elements, value) {
         if (!elements || elements.length === 0) return;
@@ -359,76 +414,76 @@ class FormFiller {
         elements.forEach(element => {
             try {
                 if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-                    // 普通输入框和文本域
+                    // Regular input boxes and text areas
                     element.focus();
                     element.value = value;
-                    
-                    // 触发各种事件以确保网站检测到变化
+
+                    // Trigger various events to ensure website detects changes
                     this.triggerEvent(element, 'input');
                     this.triggerEvent(element, 'change');
                     this.triggerEvent(element, 'blur');
-                    
+
                 } else if (element.hasAttribute('contenteditable')) {
-                    // 富文本编辑器
+                    // Rich text editor
                     element.focus();
                     element.innerHTML = value.replace(/\n/g, '<br>');
-                    
+
                     this.triggerEvent(element, 'input');
                     this.triggerEvent(element, 'blur');
                 }
 
                 if (this.debug) {
-                    console.log(`✅ 已填充字段: ${element.tagName}[name="${element.name || '无'}", id="${element.id || '无'}", placeholder="${element.placeholder || '无'}"] = ${value}`);
+                    console.log(`✅ Field filled: ${element.tagName}[name="${element.name || 'none'}", id="${element.id || 'none'}", placeholder="${element.placeholder || 'none'}"] = ${value}`);
                 }
 
             } catch (error) {
-                console.error('填充字段时出错:', error, element);
+                console.error('Error filling field:', error, element);
             }
         });
     }
 
     /**
-     * 处理Logo上传
-     * @param {Array} elements logo上传字段数组  
-     * @param {string} logoDataUrl logo的Data URL
+     * Handle logo upload
+     * @param {Array} elements Array of logo upload fields  
+     * @param {string} logoDataUrl Logo data URL
      */
     async handleLogoUpload(elements, logoDataUrl) {
         if (!elements || elements.length === 0) return;
 
         try {
-            // 将Data URL转换为File对象
+            // Convert Data URL to File object
             const file = await this.dataURLtoFile(logoDataUrl, 'logo.png');
-            
+
             elements.forEach(element => {
                 try {
-                    // 创建DataTransfer对象来模拟文件选择
+                    // Create DataTransfer object to simulate file selection
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(file);
-                    
+
                     element.files = dataTransfer.files;
-                    
-                    // 触发change事件
+
+                    // Trigger change event
                     this.triggerEvent(element, 'change');
-                    
+
                     if (this.debug) {
-                        console.log(`已上传Logo到字段: ${element.name || element.id}`);
+                        console.log(`Logo uploaded to field: ${element.name || element.id}`);
                     }
-                    
+
                 } catch (error) {
-                    console.error('上传logo到字段时出错:', error, element);
+                    console.error('Error uploading logo to field:', error, element);
                 }
             });
-            
+
         } catch (error) {
-            console.error('处理logo上传时出错:', error);
+            console.error('Error handling logo upload:', error);
         }
     }
 
     /**
-     * 将Data URL转换为File对象
+     * Convert Data URL to File object
      * @param {string} dataurl Data URL
-     * @param {string} filename 文件名
-     * @returns {Promise<File>} File对象
+     * @param {string} filename Filename
+     * @returns {Promise<File>} File object
      */
     dataURLtoFile(dataurl, filename) {
         return new Promise((resolve) => {
@@ -437,20 +492,20 @@ class FormFiller {
             const bstr = atob(arr[1]);
             let n = bstr.length;
             const u8arr = new Uint8Array(n);
-            
+
             while (n--) {
                 u8arr[n] = bstr.charCodeAt(n);
             }
-            
+
             const file = new File([u8arr], filename, { type: mime });
             resolve(file);
         });
     }
 
     /**
-     * 触发DOM事件
-     * @param {Element} element 目标元素
-     * @param {string} eventType 事件类型
+     * Trigger DOM event
+     * @param {Element} element Target element
+     * @param {string} eventType Event type
      */
     triggerEvent(element, eventType) {
         try {
@@ -459,8 +514,8 @@ class FormFiller {
                 cancelable: true
             });
             element.dispatchEvent(event);
-            
-            // 额外触发React/Vue等框架可能需要的事件
+
+            // Additionally trigger events that React/Vue frameworks might need
             if (eventType === 'input') {
                 const inputEvent = new InputEvent('input', {
                     bubbles: true,
@@ -472,19 +527,19 @@ class FormFiller {
             }
         } catch (error) {
             if (this.debug) {
-                console.warn('触发事件失败:', eventType, error);
+                console.warn('Failed to trigger event:', eventType, error);
             }
         }
     }
 
     /**
-     * 为所有填充的字段触发change事件
-     * @param {Object} fields 字段对象
+     * Trigger change events for all filled fields
+     * @param {Object} fields Field objects
      */
     triggerChangeEvents(fields) {
         Object.values(fields).forEach(fieldArray => {
             fieldArray.forEach(element => {
-                // 延迟触发事件，让浏览器有时间处理
+                // Delay event triggering to give browser time to process
                 setTimeout(() => {
                     this.triggerEvent(element, 'change');
                     this.triggerEvent(element, 'blur');
@@ -494,62 +549,62 @@ class FormFiller {
     }
 
     /**
-     * 检查元素是否可见
-     * @param {Element} element 要检查的元素
-     * @returns {boolean} 是否可见
+     * Check if element is visible
+     * @param {Element} element Element to check
+     * @returns {boolean} Whether visible
      */
     isVisible(element) {
         if (!element) return false;
-        
+
         const style = window.getComputedStyle(element);
-        return style.display !== 'none' && 
-               style.visibility !== 'hidden' && 
-               style.opacity !== '0' &&
-               element.offsetWidth > 0 && 
-               element.offsetHeight > 0;
+        return style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0' &&
+            element.offsetWidth > 0 &&
+            element.offsetHeight > 0;
     }
 
     /**
-     * 检查元素是否被禁用
-     * @param {Element} element 要检查的元素
-     * @returns {boolean} 是否被禁用
+     * Check if element is disabled
+     * @param {Element} element Element to check
+     * @returns {boolean} Whether disabled
      */
     isDisabled(element) {
         return element.disabled || element.readOnly;
     }
 
     /**
-     * 提取页面内容（用于AI分析的备用方案）
-     * @returns {string} 页面内容
+     * Extract page content (backup solution for AI analysis)
+     * @returns {string} Page content
      */
     extractPageContent() {
         const title = document.title || '';
         const metaDescription = document.querySelector('meta[name="description"]')?.content || '';
         const h1Elements = Array.from(document.querySelectorAll('h1')).map(h1 => h1.textContent.trim());
         const h2Elements = Array.from(document.querySelectorAll('h2')).slice(0, 5).map(h2 => h2.textContent.trim());
-        
-        // 提取可能的logo
+
+        // Extract possible logo
         const logoImg = document.querySelector('img[alt*="logo" i], .logo img, #logo img, [class*="brand"] img');
         const logoUrl = logoImg ? new URL(logoImg.src, window.location.href).href : '';
-        
-        // 提取主要内容段落
+
+        // Extract main content paragraphs
         const paragraphs = Array.from(document.querySelectorAll('p, .description, .about'))
             .slice(0, 10)
             .map(p => p.textContent.trim())
             .filter(text => text.length > 20);
 
         const content = `
-标题: ${title}
-描述: ${metaDescription}
-主要标题: ${h1Elements.join(', ')}
-次级标题: ${h2Elements.join(', ')}
+Title: ${title}
+Description: ${metaDescription}
+Main headings: ${h1Elements.join(', ')}
+Secondary headings: ${h2Elements.join(', ')}
 Logo URL: ${logoUrl}
-主要内容: ${paragraphs.join(' ').substring(0, 1000)}
+Main content: ${paragraphs.join(' ').substring(0, 1000)}
         `.trim();
 
         return content;
     }
 }
 
-// 初始化FormFiller
+// Initialize FormFiller
 const formFiller = new FormFiller();

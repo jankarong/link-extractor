@@ -1,10 +1,10 @@
 // Background Service Worker for Link Extractor Chrome Extension
 
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('外链信息填充助手已安装');
+    console.log('Link Extractor Assistant installed');
 });
 
-// 处理来自popup的消息
+// Handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'fetchWebsite') {
         fetchWebsiteContent(request.url)
@@ -12,23 +12,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ success: true, content });
             })
             .catch(error => {
-                console.error('获取网站内容失败:', error);
+                console.error('Failed to fetch website content:', error);
                 sendResponse({ success: false, error: error.message });
             });
         
-        // 返回true表示异步响应
+        // Return true for async response
         return true;
     }
 });
 
 /**
- * 获取网站内容
- * @param {string} url 网站URL
- * @returns {Promise<string>} 网站内容
+ * Fetch website content
+ * @param {string} url Website URL
+ * @returns {Promise<string>} Website content
  */
 async function fetchWebsiteContent(url) {
     try {
-        // 使用fetch获取网站内容
+        // Use fetch to get website content
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -42,30 +42,30 @@ async function fetchWebsiteContent(url) {
 
         const html = await response.text();
         
-        // 提取关键信息
+        // Extract key information
         const extractedContent = extractRelevantContent(html, url);
         
         return extractedContent;
     } catch (error) {
         console.error('Fetch failed:', error);
         
-        // 如果直接fetch失败，尝试通过content script获取
+        // If direct fetch fails, try via content script
         try {
             return await getContentViaContentScript(url);
         } catch (contentScriptError) {
-            throw new Error(`无法获取网站内容: ${error.message}`);
+            throw new Error(`Unable to fetch website content: ${error.message}`);
         }
     }
 }
 
 /**
- * 从HTML中提取相关内容
- * @param {string} html HTML内容
- * @param {string} url 原始URL
- * @returns {string} 提取的内容
+ * Extract relevant content from HTML
+ * @param {string} html HTML content
+ * @param {string} url Original URL
+ * @returns {string} Extracted content
  */
 function extractRelevantContent(html, url) {
-    // 创建临时DOM来解析HTML
+    // Create temporary DOM to parse HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     
@@ -79,32 +79,32 @@ function extractRelevantContent(html, url) {
         text: ''
     };
 
-    // 提取标题
+    // Extract title
     const titleEl = doc.querySelector('title');
     if (titleEl) {
         extractedInfo.title = titleEl.textContent.trim();
     }
 
-    // 提取meta描述
+    // Extract meta description
     const descriptionMeta = doc.querySelector('meta[name="description"], meta[property="og:description"]');
     if (descriptionMeta) {
         extractedInfo.description = descriptionMeta.getAttribute('content') || '';
     }
 
-    // 提取关键词
+    // Extract keywords
     const keywordsMeta = doc.querySelector('meta[name="keywords"]');
     if (keywordsMeta) {
         extractedInfo.keywords = keywordsMeta.getAttribute('content') || '';
     }
 
-    // 提取主要标题
+    // Extract main headings
     const headings = doc.querySelectorAll('h1, h2, h3');
     extractedInfo.headings = Array.from(headings)
-        .slice(0, 5) // 只取前5个标题
+        .slice(0, 5) // Take only first 5 headings
         .map(h => h.textContent.trim())
         .filter(text => text.length > 0);
 
-    // 提取可能的logo
+    // Extract possible logos
     const logoSelectors = [
         'img[alt*="logo" i]',
         'img[src*="logo" i]',
@@ -122,66 +122,66 @@ function extractRelevantContent(html, url) {
         logoEls.forEach(img => {
             const src = img.getAttribute('src');
             if (src && !extractedInfo.logoUrls.includes(src)) {
-                // 转换相对URL为绝对URL
+                // Convert relative URL to absolute URL
                 try {
                     const absoluteUrl = new URL(src, url).href;
                     extractedInfo.logoUrls.push(absoluteUrl);
                 } catch (e) {
-                    // 忽略无效的URL
+                    // Ignore invalid URLs
                 }
             }
         });
     });
 
-    // 提取主要文本内容
+    // Extract main text content
     const textElements = doc.querySelectorAll('p, .description, .about, .intro, [class*="desc"]');
     const textContent = Array.from(textElements)
-        .slice(0, 10) // 只取前10个段落
+        .slice(0, 10) // Take only first 10 paragraphs
         .map(el => el.textContent.trim())
-        .filter(text => text.length > 20) // 过滤太短的文本
+        .filter(text => text.length > 20) // Filter out text that's too short
         .join(' ');
 
-    extractedInfo.text = textContent.substring(0, 1000); // 限制长度
+    extractedInfo.text = textContent.substring(0, 1000); // Limit length
 
-    // 格式化输出
-    let formattedContent = `网站标题: ${extractedInfo.title}\n`;
+    // Format output
+    let formattedContent = `Website Title: ${extractedInfo.title}\n`;
     
     if (extractedInfo.description) {
-        formattedContent += `网站描述: ${extractedInfo.description}\n`;
+        formattedContent += `Website Description: ${extractedInfo.description}\n`;
     }
     
     if (extractedInfo.keywords) {
-        formattedContent += `关键词: ${extractedInfo.keywords}\n`;
+        formattedContent += `Keywords: ${extractedInfo.keywords}\n`;
     }
     
     if (extractedInfo.headings.length > 0) {
-        formattedContent += `主要标题: ${extractedInfo.headings.join(', ')}\n`;
+        formattedContent += `Main Headings: ${extractedInfo.headings.join(', ')}\n`;
     }
     
     if (extractedInfo.logoUrls.length > 0) {
-        formattedContent += `可能的Logo: ${extractedInfo.logoUrls[0]}\n`;
+        formattedContent += `Possible Logo: ${extractedInfo.logoUrls[0]}\n`;
     }
     
     if (extractedInfo.text) {
-        formattedContent += `网站内容摘要: ${extractedInfo.text}\n`;
+        formattedContent += `Website Content Summary: ${extractedInfo.text}\n`;
     }
 
     return formattedContent;
 }
 
 /**
- * 通过content script获取内容（备用方案）
- * @param {string} url 网站URL
- * @returns {Promise<string>} 网站内容
+ * Get content via content script (fallback method)
+ * @param {string} url Website URL
+ * @returns {Promise<string>} Website content
  */
 async function getContentViaContentScript(url) {
     return new Promise((resolve, reject) => {
-        // 创建新标签页
+        // Create new tab
         chrome.tabs.create({ url: url, active: false }, (tab) => {
-            // 等待页面加载
+            // Wait for page to load
             setTimeout(() => {
                 chrome.tabs.sendMessage(tab.id, { action: 'extractContent' }, (response) => {
-                    // 关闭标签页
+                    // Close tab
                     chrome.tabs.remove(tab.id);
                     
                     if (chrome.runtime.lastError) {
@@ -192,41 +192,41 @@ async function getContentViaContentScript(url) {
                     if (response && response.success) {
                         resolve(response.content);
                     } else {
-                        reject(new Error('无法提取网站内容'));
+                        reject(new Error('Unable to extract website content'));
                     }
                 });
-            }, 3000); // 等待3秒让页面加载
+            }, 3000); // Wait 3 seconds for page to load
         });
     });
 }
 
-// 处理扩展图标点击 - 优先打开侧边栏
+// Handle extension icon click - prioritize opening sidebar
 chrome.action.onClicked.addListener(async (tab) => {
     try {
-        // 优先尝试打开侧边栏
+        // Try to open sidebar first
         await chrome.sidePanel.open({ windowId: tab.windowId });
     } catch (error) {
-        console.log('无法打开侧边栏，使用默认popup:', error);
-        // 如果无法打开侧边栏，会回退到manifest中配置的popup
+        console.log('Unable to open sidebar, using default popup:', error);
+        // If unable to open sidebar, fall back to popup configured in manifest
     }
 });
 
-// 监听存储变化，用于调试
+// Listen for storage changes, for debugging
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    console.log('存储变化:', changes, namespace);
+    console.log('Storage changes:', changes, namespace);
 });
 
-// 处理安装和更新
+// Handle installation and updates
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
-        console.log('插件首次安装');
-        // 可以在这里设置默认值或显示欢迎页面
+        console.log('Extension first time installation');
+        // Can set default values or show welcome page here
     } else if (details.reason === 'update') {
-        console.log('插件已更新到版本:', chrome.runtime.getManifest().version);
+        console.log('Extension updated to version:', chrome.runtime.getManifest().version);
     }
 });
 
-// 错误处理
+// Error handling
 self.addEventListener('error', (event) => {
     console.error('Background script error:', event.error);
 });

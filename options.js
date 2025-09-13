@@ -5,7 +5,7 @@ class OptionsManager {
             enableAutoFill: true,
             enableLogoUpload: true,
             enableDebugMode: false,
-            interfaceLanguage: 'zh',
+            interfaceLanguage: 'en',
             contentLanguage: 'en'
         };
 
@@ -112,7 +112,7 @@ class OptionsManager {
                 enableAutoFill: result.enableAutoFill !== false,
                 enableLogoUpload: result.enableLogoUpload !== false,
                 enableDebugMode: result.enableDebugMode || false,
-                interfaceLanguage: result.interfaceLanguage || 'zh',
+                interfaceLanguage: result.interfaceLanguage || 'en',
                 contentLanguage: result.contentLanguage || 'en'
             };
         } catch (error) {
@@ -174,7 +174,8 @@ class OptionsManager {
         const apiKey = this.settings.geminiApiKey.trim();
 
         if (!apiKey) {
-            this.showApiStatus('请先输入API Key', 'error');
+            const text = (window.langManager && window.langManager.getText('pleaseEnterApiKey')) || '请先输入API Key';
+            this.showApiStatus(text, 'error');
             return;
         }
 
@@ -185,23 +186,18 @@ class OptionsManager {
             const isConnected = await gemini.testConnection();
 
             if (isConnected) {
-                this.showApiStatus('✅ API连接成功！可以正常使用AI分析功能', 'success');
+                const ok = (window.langManager && window.langManager.getText('apiConnected')) || '✅ API连接成功！可以正常使用AI分析功能';
+                this.showApiStatus(ok, 'success');
             } else {
-                this.showApiStatus('❌ API响应异常，请检查API Key是否正确', 'error');
+                const err = (window.langManager && window.langManager.getText('apiError')) || '❌ API响应异常，请检查API Key是否正确';
+                this.showApiStatus(err, 'error');
             }
 
         } catch (error) {
             console.error('API测试失败:', error);
 
-            if (error.message.includes('400')) {
-                this.showApiStatus('❌ API Key无效或请求格式错误', 'error');
-            } else if (error.message.includes('403')) {
-                this.showApiStatus('❌ API Key权限不足或已被限制', 'error');
-            } else if (error.message.includes('网络')) {
-                this.showApiStatus('❌ 网络连接错误，请检查网络设置', 'error');
-            } else {
-                this.showApiStatus(`❌ API连接失败: ${error.message}`, 'error');
-            }
+            const generic = (window.langManager && window.langManager.getText('apiError')) || '❌ API连接失败';
+            this.showApiStatus(`${generic}: ${error.message}`, 'error');
         } finally {
             this.showLoading(false);
         }
@@ -221,7 +217,8 @@ class OptionsManager {
         const apiKey = this.settings.geminiApiKey.trim();
 
         if (!apiKey) {
-            this.showMessage('请先输入API Key', 'error');
+            const text = (window.langManager && window.langManager.getText('pleaseEnterApiKey')) || '请先输入API Key';
+            this.showMessage(text, 'error');
             return;
         }
 
@@ -229,10 +226,12 @@ class OptionsManager {
             await chrome.storage.local.set({
                 geminiApiKey: this.settings.geminiApiKey
             });
-            this.showMessage('✅ API Key保存成功！', 'success');
+            const text = (window.langManager && window.langManager.getText('infoSaved')) || '✅ API Key保存成功！';
+            this.showMessage(text, 'success');
         } catch (error) {
             console.error('保存API Key失败:', error);
-            this.showMessage('保存失败，请重试', 'error');
+            const text = (window.langManager && window.langManager.getText('apiError')) || '保存失败，请重试';
+            this.showMessage(text, 'error');
         }
     }
 

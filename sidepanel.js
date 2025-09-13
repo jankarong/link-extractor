@@ -8,7 +8,9 @@ class SidePanelApp {
             description: '',
             category: '',
             features: '',
-            logo: null
+            comment: '',
+            logo: null,
+            screenshot: null
         };
         this.savedProducts = [];
 
@@ -33,6 +35,14 @@ class SidePanelApp {
         document.getElementById('uploadLogoBtn').addEventListener('click', () => this.triggerLogoUpload());
         document.getElementById('logoUpload').addEventListener('change', (e) => this.handleLogoUpload(e));
 
+        // 网页截图/上传
+        const captureBtn = document.getElementById('captureScreenshotBtn');
+        const uploadScreenshotBtn = document.getElementById('uploadScreenshotBtn');
+        const screenshotUpload = document.getElementById('screenshotUpload');
+        if (captureBtn) captureBtn.addEventListener('click', () => this.captureScreenshot());
+        if (uploadScreenshotBtn) uploadScreenshotBtn.addEventListener('click', () => screenshotUpload && screenshotUpload.click());
+        if (screenshotUpload) screenshotUpload.addEventListener('change', (e) => this.handleScreenshotUpload(e));
+
         // 表单输入
         document.getElementById('productName').addEventListener('input', (e) => this.updateCurrentProduct('productName', e.target.value));
         document.getElementById('website').addEventListener('input', (e) => this.updateCurrentProduct('website', e.target.value));
@@ -40,6 +50,7 @@ class SidePanelApp {
         document.getElementById('description').addEventListener('input', (e) => this.updateCurrentProduct('description', e.target.value));
         document.getElementById('category').addEventListener('input', (e) => this.updateCurrentProduct('category', e.target.value));
         document.getElementById('features').addEventListener('input', (e) => this.updateCurrentProduct('features', e.target.value));
+        document.getElementById('comment').addEventListener('input', (e) => this.updateCurrentProduct('comment', e.target.value));
 
         // 操作按钮
         document.getElementById('saveBtn').addEventListener('click', () => this.saveProduct());
@@ -68,19 +79,22 @@ class SidePanelApp {
         const url = urlInput.value.trim();
 
         if (!url) {
-            this.showMessage('请输入网站URL', 'error');
+            const text = (window.langManager && window.langManager.getText('enterUrl')) || '请输入网站URL';
+            this.showMessage(text, 'error');
             return;
         }
 
         if (!this.isValidUrl(url)) {
-            this.showMessage('请输入有效的URL', 'error');
+            const text = (window.langManager && window.langManager.getText('invalidUrl')) || '请输入有效的URL';
+            this.showMessage(text, 'error');
             return;
         }
 
         // 检查API key
         const apiKey = await this.getApiKey();
         if (!apiKey) {
-            this.showMessage('请先在设置中配置Gemini API Key', 'error');
+            const text = (window.langManager && window.langManager.getText('configureApiKey')) || '请先在设置中配置Gemini API Key';
+            this.showMessage(text, 'error');
             return;
         }
 
@@ -94,7 +108,8 @@ class SidePanelApp {
             setTimeout(async () => {
                 const autoSaved = await this.autoSaveAfterAnalysis();
                 if (autoSaved) {
-                    this.showMessage('AI分析完成并已自动保存！', 'success');
+                    const text = (window.langManager && window.langManager.getText('analysisAutoSaved')) || 'AI分析完成并已自动保存！';
+                    this.showMessage(text, 'success');
                 }
             }, 100);
 
@@ -183,6 +198,12 @@ class SidePanelApp {
             console.log('设置功能:', analysis.features);
         }
 
+        if (analysis.comment) {
+            document.getElementById('comment').value = analysis.comment;
+            this.currentProduct.comment = analysis.comment;
+            console.log('设置评论:', analysis.comment);
+        }
+
         // 处理logo
         if (analysis.logoUrl) {
             this.loadLogoFromUrl(analysis.logoUrl);
@@ -218,7 +239,8 @@ class SidePanelApp {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            this.showMessage('请选择图片文件', 'error');
+            const text = (window.langManager && window.langManager.getText('selectImageFile')) || '请选择图片文件';
+            this.showMessage(text, 'error');
             return;
         }
 
@@ -236,8 +258,50 @@ class SidePanelApp {
         if (this.currentProduct.logo) {
             logoContainer.innerHTML = `<img src="${this.currentProduct.logo}" alt="Product Logo">`;
         } else {
-            logoContainer.innerHTML = '<div class="logo-placeholder">未选择Logo</div>';
+            const noLogo = (window.langManager && window.langManager.getText('noLogo')) || '未选择Logo';
+            logoContainer.innerHTML = `<div class="logo-placeholder">${noLogo}</div>`;
         }
+    }
+
+    updateScreenshotDisplay() {
+        const container = document.getElementById('screenshotContainer');
+        if (!container) return;
+        if (this.currentProduct.screenshot) {
+            container.innerHTML = `<img src="${this.currentProduct.screenshot}" alt="Page Screenshot">`;
+        } else {
+            const text = (window.langManager && window.langManager.getText('noScreenshot')) || '未截图';
+            container.innerHTML = `<div class="logo-placeholder">${text}</div>`;
+        }
+    }
+
+    async captureScreenshot() {
+        try {
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            this.currentProduct.screenshot = dataUrl;
+            this.updateScreenshotDisplay();
+            const text = (window.langManager && window.langManager.getText('screenshotTaken')) || '已截取当前页面截图';
+            this.showMessage(text, 'success');
+        } catch (error) {
+            console.error('截图失败:', error);
+            const text = (window.langManager && window.langManager.getText('screenshotFailed')) || '截图失败，请重试';
+            this.showMessage(text, 'error');
+        }
+    }
+
+    handleScreenshotUpload(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            const text = (window.langManager && window.langManager.getText('selectImageFile')) || '请选择图片文件';
+            this.showMessage(text, 'error');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.currentProduct.screenshot = e.target.result;
+            this.updateScreenshotDisplay();
+        };
+        reader.readAsDataURL(file);
     }
 
     updateCurrentProduct(field, value) {
@@ -265,6 +329,7 @@ class SidePanelApp {
             const description = document.getElementById('description').value;
             const category = document.getElementById('category').value;
             const features = document.getElementById('features').value;
+            const comment = document.getElementById('comment').value;
 
             // 更新currentProduct以确保数据同步
             this.currentProduct.productName = productName;
@@ -273,6 +338,7 @@ class SidePanelApp {
             this.currentProduct.description = description;
             this.currentProduct.category = category;
             this.currentProduct.features = features;
+            this.currentProduct.comment = comment;
 
             // 检查是否有足够的信息进行自动保存
             if (!productName && !website) {
@@ -299,10 +365,10 @@ class SidePanelApp {
                         this.currentProduct.productName = url.hostname.replace('www.', '').replace('.com', '').replace('.cn', '');
                         document.getElementById('productName').value = this.currentProduct.productName;
                     } catch (e) {
-                        this.currentProduct.productName = 'AI分析产品';
+                        this.currentProduct.productName = (window.langManager && window.langManager.getText('aiAnalyzedProduct')) || 'AI分析产品';
                     }
                 } else {
-                    this.currentProduct.productName = 'AI分析产品';
+                    this.currentProduct.productName = (window.langManager && window.langManager.getText('aiAnalyzedProduct')) || 'AI分析产品';
                 }
             }
 
@@ -330,7 +396,8 @@ class SidePanelApp {
 
     async saveProduct() {
         if (!this.currentProduct.productName) {
-            this.showMessage('请至少填写产品名称', 'error');
+            const text = (window.langManager && window.langManager.getText('enterProductName')) || '请至少填写产品名称';
+            this.showMessage(text, 'error');
             return;
         }
 
@@ -344,7 +411,8 @@ class SidePanelApp {
         this.savedProducts.push(productToSave);
         await this.saveSavedProducts();
         this.updateProductsList();
-        this.showMessage('产品信息已保存', 'success');
+        const savedText = (window.langManager && window.langManager.getText('infoSaved')) || '产品信息已保存';
+        this.showMessage(savedText, 'success');
     }
 
     async fillForm() {
@@ -356,11 +424,13 @@ class SidePanelApp {
                 data: this.currentProduct
             });
 
-            this.showMessage('表单填充完成！', 'success');
+            const okText = (window.langManager && window.langManager.getText('formFilled')) || '表单填充完成！';
+            this.showMessage(okText, 'success');
 
         } catch (error) {
             console.error('填充表单失败:', error);
-            this.showMessage('填充表单失败，请确保页面支持自动填充', 'error');
+            const errText = (window.langManager && window.langManager.getText('fillFailed')) || '填充表单失败，请确保页面支持自动填充';
+            this.showMessage(errText, 'error');
         }
     }
 
@@ -386,28 +456,29 @@ class SidePanelApp {
         const productsList = document.getElementById('productsList');
 
         if (this.savedProducts.length === 0) {
-            productsList.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">暂无保存的产品</p>';
+            const text = (window.langManager && window.langManager.getText('noSavedProducts')) || '暂无保存的产品';
+            productsList.innerHTML = `<p style="color: #666; text-align: center; padding: 20px;">${text}</p>`;
             return;
         }
 
         productsList.innerHTML = this.savedProducts.map(product => `
             <div class="product-item" data-product-id="${product.id}">
                 <div class="product-item-logo">
-                    ${product.logo ? `<img src="${product.logo}" alt="${product.productName}">` : '<div style="background-color: #f0f0f0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">无</div>'}
+                    ${product.logo ? `<img src="${product.logo}" alt="${product.productName}">` : `<div style=\"background-color: #f0f0f0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;\">${(window.langManager && window.langManager.getText('none')) || '无'}</div>`}
                 </div>
                 <div class="product-item-info">
                     <div class="product-item-name">
-                        ${product.productName || '未命名产品'}
+                        ${product.productName || ((window.langManager && window.langManager.getText('unnamedProduct')) || '未命名产品')}
                         ${product.autoSaved ? '<span style="font-size: 10px; color: #1a73e8; margin-left: 4px;">🤖</span>' : ''}
                     </div>
-                    <div class="product-item-website" style="font-size: 11px; color: #888; margin: 2px 0;">${product.website || '无网站'}</div>
-                    <div class="product-item-tagline">${product.tagline || '无标语'}</div>
+                    <div class="product-item-website" style="font-size: 11px; color: #888; margin: 2px 0;">${product.website || ((window.langManager && window.langManager.getText('noWebsite')) || '无网站')}</div>
+                    <div class="product-item-tagline">${product.tagline || ((window.langManager && window.langManager.getText('noTagline')) || '无标语')}</div>
                     ${product.category ? `<div class="product-item-category" style="font-size: 10px; color: #007bff; background-color: #e3f2fd; padding: 2px 6px; border-radius: 8px; display: inline-block; margin: 2px 0;">${product.category}</div>` : ''}
                     ${product.features ? `<div class="product-item-features" style="font-size: 10px; color: #666; margin-top: 2px;">${product.features.substring(0, 50)}${product.features.length > 50 ? '...' : ''}</div>` : ''}
                 </div>
                 <div class="product-item-actions">
-                    <button class="load-product-btn" data-product-id="${product.id}" title="使用">📝</button>
-                    <button class="delete-product-btn" data-product-id="${product.id}" title="删除">🗑️</button>
+                    <button class="load-product-btn" data-product-id="${product.id}" title="${(window.langManager && window.langManager.getText('use')) || '使用'}">📝</button>
+                    <button class="delete-product-btn" data-product-id="${product.id}" title="${(window.langManager && window.langManager.getText('delete')) || '删除'}">🗑️</button>
                 </div>
             </div>
         `).join('');
@@ -464,16 +535,19 @@ class SidePanelApp {
 
         this.currentProduct = { ...product };
         this.updateUI();
-        this.showMessage('产品信息已加载', 'success');
+        const text = (window.langManager && window.langManager.getText('productLoaded')) || '产品信息已加载';
+        this.showMessage(text, 'success');
     }
 
     async deleteProduct(productId) {
-        if (!confirm('确定要删除这个产品吗？')) return;
+        const confirmText = (window.langManager && window.langManager.getText('confirmDeleteProduct')) || '确定要删除这个产品吗？';
+        if (!confirm(confirmText)) return;
 
         this.savedProducts = this.savedProducts.filter(p => p.id !== productId);
         await this.saveSavedProducts();
         this.updateProductsList();
-        this.showMessage('产品已删除', 'success');
+        const text = (window.langManager && window.langManager.getText('productDeleted')) || '产品已删除';
+        this.showMessage(text, 'success');
     }
 
     updateUI() {
@@ -483,7 +557,9 @@ class SidePanelApp {
         document.getElementById('description').value = this.currentProduct.description || '';
         document.getElementById('category').value = this.currentProduct.category || '';
         document.getElementById('features').value = this.currentProduct.features || '';
+        document.getElementById('comment').value = this.currentProduct.comment || '';
         this.updateLogoDisplay();
+        this.updateScreenshotDisplay();
         this.updateFillButton();
         this.updateProductsList();
     }

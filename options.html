@@ -4,48 +4,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>外链信息填充助手 - 设置</title>
+    <title data-i18n="settingsTitle">外链信息填充助手 - 设置</title>
     <link rel="stylesheet" href="options.css">
 </head>
 
 <body>
     <div class="container">
         <div class="header">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <button id="backToSidepanel" class="secondary-btn" style="display:none;">← 返回侧边栏</button>
-                <div style="flex:1;">
-                    <h1>外链信息填充助手</h1>
-                    <p class="subtitle">设置和配置</p>
-                </div>
+            <div class="header-top">
+                <button id="backToSidepanel" class="back-link" style="display:none;" data-i18n="backToSidepanel">←
+                    返回侧边栏</button>
+            </div>
+            <div class="header-title">
+                <h1 data-i18n="aboutAppName">外链信息填充助手</h1>
+                <p class="subtitle" data-i18n="settingsSubtitle">设置和配置</p>
             </div>
         </div>
 
         <div class="content">
             <div class="section">
-                <h2>🤖 Gemini AI 配置</h2>
+                <h2 data-i18n="geminiConfig">🤖 Gemini AI 配置</h2>
                 <div class="form-group">
-                    <label for="apiKey">Gemini API Key</label>
+                    <label for="apiKey" data-i18n="apiKey">Gemini API Key</label>
                     <div class="input-group">
-                        <input type="password" id="apiKey" placeholder="输入你的Gemini API Key" class="api-key-input">
+                        <input type="password" id="apiKey" class="api-key-input" data-i18n="apiKeyPlaceholder"
+                            placeholder="输入你的Gemini API Key">
                         <button id="toggleApiKey" class="toggle-btn" title="显示/隐藏API Key">👁️</button>
                     </div>
                     <div class="help-text">
-                        <p>获取API Key步骤：</p>
+                        <p data-i18n="apiKeyStepsTitle">获取API Key步骤：</p>
                         <ol>
-                            <li>访问 <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI
-                                    Studio</a></li>
-                            <li>登录你的Google账户</li>
-                            <li>点击"Create API Key"创建新的API密钥</li>
-                            <li>复制生成的API Key并粘贴到上面的输入框</li>
+                            <li><span data-i18n="visit">访问</span> <a href="https://makersuite.google.com/app/apikey"
+                                    target="_blank" data-i18n="googleAIStudio">Google AI Studio</a></li>
+                            <li data-i18n="stepLoginGoogle">登录你的Google账户</li>
+                            <li data-i18n="stepCreateAPIKey">点击"Create API Key"创建新的API密钥</li>
+                            <li data-i18n="stepCopyPasteKey">复制生成的API Key并粘贴到上面的输入框</li>
                         </ol>
-                        <p class="security-note">🔒 你的API Key只会保存在本地浏览器中，不会被上传到任何服务器</p>
+                        <p class="security-note" data-i18n="apiKeySecurityNote">🔒 你的API Key只会保存在本地浏览器中，不会被上传到任何服务器</p>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <div class="api-actions">
-                        <button id="testApiKey" class="test-btn">测试API连接</button>
-                        <button id="saveApiKey" class="primary-btn">保存API Key</button>
+                        <button id="testApiKey" class="test-btn" data-i18n="testConnection">测试API连接</button>
+                        <button id="saveApiKey" class="primary-btn" data-i18n="saveApiKey">保存API Key</button>
                     </div>
                     <div id="apiStatus" class="api-status hidden"></div>
                 </div>
@@ -79,75 +81,75 @@
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="enableAutoFill" checked>
-                        <label for="enableAutoFill">启用自动填充功能</label>
+                        <label for="enableAutoFill" data-i18n="enableAutoFill">启用自动填充功能</label>
                     </div>
-                    <p class="help-text">关闭后将不会自动识别和填充表单字段</p>
+                    <p class="help-text" data-i18n="autoFillHelp">关闭后将不会自动识别和填充表单字段</p>
                 </div>
 
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="enableLogoUpload" checked>
-                        <label for="enableLogoUpload">启用Logo自动上传</label>
+                        <label for="enableLogoUpload" data-i18n="enableLogoUpload">启用Logo自动上传</label>
                     </div>
-                    <p class="help-text">自动将Logo上传到支持的文件上传字段</p>
+                    <p class="help-text" data-i18n="logoUploadHelp">自动将Logo上传到支持的文件上传字段</p>
                 </div>
 
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="enableDebugMode">
-                        <label for="enableDebugMode">启用调试模式</label>
+                        <label for="enableDebugMode" data-i18n="enableDebugMode">启用调试模式</label>
                     </div>
-                    <p class="help-text">在浏览器控制台显示详细的调试信息</p>
+                    <p class="help-text" data-i18n="debugModeHelp">在浏览器控制台显示详细的调试信息</p>
                 </div>
             </div>
 
             <div class="section">
-                <h2>💾 数据管理</h2>
+                <h2 data-i18n="dataManagement">💾 数据管理</h2>
 
                 <div class="form-group">
-                    <button id="exportData" class="secondary-btn">导出已保存的产品数据</button>
-                    <p class="help-text">将所有保存的产品信息导出为JSON文件</p>
+                    <button id="exportData" class="secondary-btn" data-i18n="exportData">导出已保存的产品数据</button>
+                    <p class="help-text" data-i18n="exportData">将所有保存的产品信息导出为JSON文件</p>
                 </div>
 
                 <div class="form-group">
                     <input type="file" id="importFile" accept=".json" class="hidden">
-                    <button id="importData" class="secondary-btn">导入产品数据</button>
-                    <p class="help-text">从JSON文件导入产品信息</p>
+                    <button id="importData" class="secondary-btn" data-i18n="importData">导入产品数据</button>
+                    <p class="help-text" data-i18n="importData">从JSON文件导入产品信息</p>
                 </div>
 
                 <div class="form-group">
-                    <button id="clearData" class="danger-btn">清除所有数据</button>
-                    <p class="help-text danger">⚠️ 这将删除所有保存的产品信息，此操作不可恢复</p>
+                    <button id="clearData" class="danger-btn" data-i18n="clearData">清除所有数据</button>
+                    <p class="help-text danger" data-i18n="clearData">⚠️ 这将删除所有保存的产品信息，此操作不可恢复</p>
                 </div>
             </div>
 
             <div class="section">
-                <h2>📊 使用统计</h2>
+                <h2 data-i18n="usageStats">📊 使用统计</h2>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number" id="totalAnalyses">-</div>
-                        <div class="stat-label">AI分析次数</div>
+                        <div class="stat-label" data-i18n="statAnalyses">AI分析次数</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="totalFills">-</div>
-                        <div class="stat-label">表单填充次数</div>
+                        <div class="stat-label" data-i18n="statFills">表单填充次数</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="savedProducts">-</div>
-                        <div class="stat-label">保存的产品</div>
+                        <div class="stat-label" data-i18n="statSavedProducts">保存的产品</div>
                     </div>
                 </div>
             </div>
 
             <div class="section">
-                <h2>ℹ️ 关于</h2>
+                <h2 data-i18n="about">ℹ️ 关于</h2>
                 <div class="about-info">
-                    <p><strong>外链信息填充助手</strong> v1.0.0</p>
-                    <p>使用AI自动分析网站信息并一键填充外链表单的Chrome插件</p>
+                    <p><strong data-i18n="aboutAppName">外链信息填充助手</strong> v1.0.0</p>
+                    <p data-i18n="aboutDescription">使用AI自动分析网站信息并一键填充外链表单的Chrome插件</p>
                     <div class="links">
-                        <a href="#" id="helpLink">使用帮助</a>
-                        <a href="#" id="feedbackLink">反馈建议</a>
-                        <a href="#" id="updateLink">检查更新</a>
+                        <a href="#" id="helpLink" data-i18n="help">使用帮助</a>
+                        <a href="#" id="feedbackLink" data-i18n="feedback">反馈建议</a>
+                        <a href="#" id="updateLink" data-i18n="checkUpdates">检查更新</a>
                     </div>
                 </div>
             </div>
@@ -155,8 +157,8 @@
 
         <div class="footer">
             <div class="actions">
-                <button id="resetSettings" class="secondary-btn">重置所有设置</button>
-                <p class="auto-save-note">💡 设置会自动保存，无需手动操作</p>
+                <button id="resetSettings" class="secondary-btn" data-i18n="resetSettings">重置所有设置</button>
+                <p class="auto-save-note" data-i18n="autoSaveNote">💡 设置会自动保存，无需手动操作</p>
             </div>
         </div>
 
@@ -166,7 +168,7 @@
         <!-- 加载状态 -->
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <p>测试连接中...</p>
+            <p data-i18n="testingConnection">测试连接中...</p>
         </div>
     </div>
 
