@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Link Extractor Assistant",
+  "name": "Backlink Form Filler",
   "version": "1.0.0",
   "description": "Chrome extension that uses AI to analyze websites and auto-fill link submission forms",
   "permissions": [
@@ -31,7 +31,7 @@
     }
   ],
   "action": {
-    "default_title": "Link Extractor Assistant"
+    "default_title": "Backlink Form Filler"
   },
   "options_page": "options.html",
   "side_panel": {

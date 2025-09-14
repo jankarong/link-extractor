@@ -1,4 +1,4 @@
-# 外链信息填充助手
+# Backlink Form Filler
 
 一个智能的Chrome浏览器扩展，使用Gemini AI自动分析网站信息并一键填充外链提交表单。
 
