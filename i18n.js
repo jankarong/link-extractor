@@ -74,6 +74,7 @@ const I18N = {
         noScreenshot: "未截图",
         captureScreenshot: "截屏网页",
         uploadScreenshot: "上传截图",
+        downloadScreenshot: "下载截图",
         category: "分类",
         categoryPlaceholder: "输入产品分类",
 
@@ -199,6 +200,7 @@ const I18N = {
         noScreenshot: "No screenshot",
         captureScreenshot: "Capture Page",
         uploadScreenshot: "Upload Screenshot",
+        downloadScreenshot: "Download Screenshot",
         category: "Category",
         categoryPlaceholder: "Enter product category",
 
@@ -330,6 +332,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     langManager = new LanguageManager();
     await langManager.loadLanguages();
     langManager.updatePageTexts();
+    // 让其他脚本可以访问到已初始化的语言管理器实例
+    if (typeof window !== 'undefined') {
+        window.langManager = langManager;
+    }
 });
 
 // 导出给其他文件使用

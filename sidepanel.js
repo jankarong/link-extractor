@@ -38,9 +38,11 @@ class SidePanelApp {
         // 网页截图/上传
         const captureBtn = document.getElementById('captureScreenshotBtn');
         const uploadScreenshotBtn = document.getElementById('uploadScreenshotBtn');
+        const downloadScreenshotBtn = document.getElementById('downloadScreenshotBtn');
         const screenshotUpload = document.getElementById('screenshotUpload');
         if (captureBtn) captureBtn.addEventListener('click', () => this.captureScreenshot());
         if (uploadScreenshotBtn) uploadScreenshotBtn.addEventListener('click', () => screenshotUpload && screenshotUpload.click());
+        if (downloadScreenshotBtn) downloadScreenshotBtn.addEventListener('click', () => this.downloadScreenshot());
         if (screenshotUpload) screenshotUpload.addEventListener('change', (e) => this.handleScreenshotUpload(e));
 
         // 表单输入
@@ -104,14 +106,19 @@ class SidePanelApp {
             const analysis = await this.callGeminiAPI(url, apiKey);
             this.fillProductInfo(analysis);
 
-            // AI分析成功后自动保存
-            setTimeout(async () => {
-                const autoSaved = await this.autoSaveAfterAnalysis();
-                if (autoSaved) {
-                    const text = (window.langManager && window.langManager.getText('analysisAutoSaved')) || 'AI分析完成并已自动保存！';
-                    this.showMessage(text, 'success');
-                }
-            }, 100);
+            // 分析完成后，自动截图所输入网址的首页
+            try {
+                await this.captureUrlHomepage(url);
+            } catch (capErr) {
+                console.error('自动截图失败，跳过:', capErr);
+            }
+
+            // 自动保存（包含可能截到的截图）
+            const autoSaved = await this.autoSaveAfterAnalysis();
+            if (autoSaved) {
+                const text = (window.langManager && window.langManager.getText('analysisAutoSaved')) || 'AI分析完成并已自动保存！';
+                this.showMessage(text, 'success');
+            }
 
         } catch (error) {
             console.error('AI分析失败:', error);
@@ -276,15 +283,108 @@ class SidePanelApp {
 
     async captureScreenshot() {
         try {
+            // 优先使用表单中的网站链接；没有则使用AI输入框中的URL
+            const websiteInput = document.getElementById('website');
+            const aiUrlInput = document.getElementById('urlInput');
+            const urlFromInputs = (websiteInput && websiteInput.value.trim()) || (aiUrlInput && aiUrlInput.value.trim()) || '';
+
+            if (urlFromInputs && this.isValidUrl(urlFromInputs)) {
+                await this.captureUrlHomepage(urlFromInputs);
+            } else {
+                // 回退：直接截取当前活动标签页
+                const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+                this.currentProduct.screenshot = dataUrl;
+                this.updateScreenshotDisplay();
+                const okText = (window.langManager && window.langManager.getText('screenshotTaken')) || '已截取当前页面截图';
+                this.showMessage(okText, 'success');
+            }
+        } catch (error) {
+            console.error('截图失败:', error);
+            const errText = (window.langManager && window.langManager.getText('screenshotFailed')) || '截图失败，请重试';
+            this.showMessage(errText, 'error');
+        }
+    }
+
+    async captureUrlHomepage(urlString) {
+        // 记录当前活动标签页
+        const [originalTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        let createdTabId = null;
+        try {
+            // 打开新的标签页并激活
+            const newTab = await chrome.tabs.create({ url: urlString, active: true });
+            createdTabId = newTab.id;
+
+            // 等待页面加载完成并渲染
+            await this.waitForTabComplete(createdTabId, 20000);
+            await this.delay(500);
+
+            // 截图可见页面
             const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
             this.currentProduct.screenshot = dataUrl;
             this.updateScreenshotDisplay();
-            const text = (window.langManager && window.langManager.getText('screenshotTaken')) || '已截取当前页面截图';
-            this.showMessage(text, 'success');
+            const okText = (window.langManager && window.langManager.getText('screenshotTaken')) || '已截取当前页面截图';
+            this.showMessage(okText, 'success');
+        } finally {
+            // 清理：关闭临时标签并切回原标签
+            try {
+                if (createdTabId) {
+                    await chrome.tabs.remove(createdTabId);
+                }
+                if (originalTab && originalTab.id) {
+                    await chrome.tabs.update(originalTab.id, { active: true });
+                }
+            } catch (_) {
+                // 忽略清理阶段的错误
+            }
+        }
+    }
+
+    async waitForTabComplete(tabId, timeoutMs = 15000) {
+        return new Promise((resolve) => {
+            let resolved = false;
+
+            const done = () => {
+                if (!resolved) {
+                    resolved = true;
+                    chrome.tabs.onUpdated.removeListener(listener);
+                    resolve();
+                }
+            };
+
+            const listener = (updatedTabId, changeInfo) => {
+                if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                    done();
+                }
+            };
+
+            chrome.tabs.onUpdated.addListener(listener);
+
+            // 双保险：超时也继续
+            setTimeout(done, timeoutMs);
+        });
+    }
+
+    async delay(ms) {
+        return new Promise((r) => setTimeout(r, ms));
+    }
+
+    downloadScreenshot() {
+        try {
+            if (!this.currentProduct.screenshot) {
+                const text = (window.langManager && window.langManager.getText('noScreenshot')) || '未截图';
+                this.showMessage(text, 'error');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = this.currentProduct.screenshot;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.download = `screenshot-${timestamp}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (error) {
-            console.error('截图失败:', error);
-            const text = (window.langManager && window.langManager.getText('screenshotFailed')) || '截图失败，请重试';
-            this.showMessage(text, 'error');
+            console.error('下载截图失败:', error);
         }
     }
 
