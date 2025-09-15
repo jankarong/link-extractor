@@ -716,6 +716,11 @@ class SidePanelApp {
             duration = Math.max(5000, text.length * 50); // 错误消息至少5秒，长消息更久
         }
 
+        // 确保滚动到消息位置（顶部），避免在底部看不到
+        try {
+            messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (_) { }
+
         setTimeout(() => {
             messageEl.classList.add('hidden');
         }, duration);
