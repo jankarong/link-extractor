@@ -518,6 +518,15 @@ class SidePanelApp {
     async fillForm() {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            // Ensure content script is injected on demand before sending message
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content.js']
+                });
+            } catch (_) {
+                // Ignore if already injected or injection not needed
+            }
 
             await chrome.tabs.sendMessage(tab.id, {
                 action: 'fillForm',

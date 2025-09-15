@@ -15,7 +15,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.error('Failed to fetch website content:', error);
                 sendResponse({ success: false, error: error.message });
             });
-        
+
         // Return true for async response
         return true;
     }
@@ -41,14 +41,14 @@ async function fetchWebsiteContent(url) {
         }
 
         const html = await response.text();
-        
+
         // Extract key information
         const extractedContent = extractRelevantContent(html, url);
-        
+
         return extractedContent;
     } catch (error) {
         console.error('Fetch failed:', error);
-        
+
         // If direct fetch fails, try via content script
         try {
             return await getContentViaContentScript(url);
@@ -68,7 +68,7 @@ function extractRelevantContent(html, url) {
     // Create temporary DOM to parse HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    
+
     let extractedInfo = {
         url: url,
         title: '',
@@ -145,23 +145,23 @@ function extractRelevantContent(html, url) {
 
     // Format output
     let formattedContent = `Website Title: ${extractedInfo.title}\n`;
-    
+
     if (extractedInfo.description) {
         formattedContent += `Website Description: ${extractedInfo.description}\n`;
     }
-    
+
     if (extractedInfo.keywords) {
         formattedContent += `Keywords: ${extractedInfo.keywords}\n`;
     }
-    
+
     if (extractedInfo.headings.length > 0) {
         formattedContent += `Main Headings: ${extractedInfo.headings.join(', ')}\n`;
     }
-    
+
     if (extractedInfo.logoUrls.length > 0) {
         formattedContent += `Possible Logo: ${extractedInfo.logoUrls[0]}\n`;
     }
-    
+
     if (extractedInfo.text) {
         formattedContent += `Website Content Summary: ${extractedInfo.text}\n`;
     }
@@ -180,20 +180,24 @@ async function getContentViaContentScript(url) {
         chrome.tabs.create({ url: url, active: false }, (tab) => {
             // Wait for page to load
             setTimeout(() => {
-                chrome.tabs.sendMessage(tab.id, { action: 'extractContent' }, (response) => {
-                    // Close tab
-                    chrome.tabs.remove(tab.id);
-                    
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
-                        return;
-                    }
-                    
-                    if (response && response.success) {
-                        resolve(response.content);
-                    } else {
-                        reject(new Error('Unable to extract website content'));
-                    }
+                // Inject content script on demand before requesting extraction
+                chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }, () => {
+                    // Proceed to message after injection attempt
+                    chrome.tabs.sendMessage(tab.id, { action: 'extractContent' }, (response) => {
+                        // Close tab
+                        chrome.tabs.remove(tab.id);
+
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                            return;
+                        }
+
+                        if (response && response.success) {
+                            resolve(response.content);
+                        } else {
+                            reject(new Error('Unable to extract website content'));
+                        }
+                    });
                 });
             }, 3000); // Wait 3 seconds for page to load
         });
