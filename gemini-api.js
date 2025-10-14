@@ -5,7 +5,7 @@ class GeminiAPI {
         this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     }
 
-    async generateContent(prompt, model = 'gemini-1.5-flash') {
+    async generateContent(prompt, model = 'gemini-2.5-flash') {
         try {
             const response = await fetch(`${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`, {
                 method: 'POST',

@@ -222,18 +222,25 @@ class SidePanelApp {
 
     async loadLogoFromUrl(logoUrl) {
         try {
-            const response = await fetch(logoUrl);
-            const blob = await response.blob();
+            // 使用background script来获取logo以避免CORS问题
+            const response = await chrome.runtime.sendMessage({
+                action: 'fetchLogo',
+                logoUrl: logoUrl
+            });
 
-            // 转换为Data URL
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.currentProduct.logo = e.target.result;
+            if (response.success) {
+                this.currentProduct.logo = response.dataUrl;
                 this.updateLogoDisplay();
-            };
-            reader.readAsDataURL(blob);
+                console.log('Logo加载成功');
+            } else {
+                throw new Error(response.error);
+            }
         } catch (error) {
             console.error('加载logo失败:', error);
+            // 设置一个占位符或保持原有状态
+            console.log('尝试直接使用logoUrl作为src');
+            this.currentProduct.logo = logoUrl; // 尝试直接使用URL
+            this.updateLogoDisplay();
         }
     }
 
@@ -310,31 +317,54 @@ class SidePanelApp {
         const [originalTab] = await chrome.tabs.query({ active: true, currentWindow: true });
         let createdTabId = null;
         try {
+            console.log('开始截图:', urlString);
+
             // 打开新的标签页并激活
             const newTab = await chrome.tabs.create({ url: urlString, active: true });
             createdTabId = newTab.id;
+            console.log('创建新标签页:', createdTabId);
 
             // 等待页面加载完成并渲染
             await this.waitForTabComplete(createdTabId, 20000);
-            await this.delay(500);
+            await this.delay(1000); // 增加等待时间确保渲染完成
+
+            // 确保标签页仍然存在且可见
+            const tab = await chrome.tabs.get(createdTabId);
+            if (tab.status !== 'complete') {
+                console.log('页面仍在加载，等待更长时间');
+                await this.delay(2000);
+            }
 
             // 截图可见页面
+            console.log('开始截图可见区域');
             const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
-            this.currentProduct.screenshot = dataUrl;
-            this.updateScreenshotDisplay();
-            const okText = (window.langManager && window.langManager.getText('screenshotTaken')) || '已截取当前页面截图';
-            this.showMessage(okText, 'success');
+
+            if (dataUrl) {
+                this.currentProduct.screenshot = dataUrl;
+                this.updateScreenshotDisplay();
+                const okText = (window.langManager && window.langManager.getText('screenshotTaken')) || '已截取页面截图';
+                this.showMessage(okText, 'success');
+                console.log('截图成功');
+            } else {
+                throw new Error('截图返回空数据');
+            }
+        } catch (error) {
+            console.error('截图过程中出错:', error);
+            const errText = (window.langManager && window.langManager.getText('screenshotFailed')) || `截图失败: ${error.message}`;
+            this.showMessage(errText, 'error');
         } finally {
             // 清理：关闭临时标签并切回原标签
             try {
                 if (createdTabId) {
+                    console.log('关闭临时标签页:', createdTabId);
                     await chrome.tabs.remove(createdTabId);
                 }
                 if (originalTab && originalTab.id) {
+                    console.log('切回原标签页:', originalTab.id);
                     await chrome.tabs.update(originalTab.id, { active: true });
                 }
-            } catch (_) {
-                // 忽略清理阶段的错误
+            } catch (cleanupError) {
+                console.error('清理阶段出错:', cleanupError);
             }
         }
     }

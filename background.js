@@ -18,8 +18,281 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // Return true for async response
         return true;
+    } else if (request.action === 'fetchLogo') {
+        fetchLogoAsDataURL(request.logoUrl)
+            .then(dataUrl => {
+                sendResponse({ success: true, dataUrl });
+            })
+            .catch(error => {
+                console.error('Failed to fetch logo:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+
+        // Return true for async response
+        return true;
     }
 });
+
+/**
+ * Fetch logo and convert to data URL with retry mechanism
+ * @param {string} logoUrl Logo URL
+ * @returns {Promise<string>} Data URL of the logo
+ */
+async function fetchLogoAsDataURL(logoUrl) {
+    const maxRetries = 2;
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`尝试获取logo (第${attempt + 1}次):`, logoUrl);
+
+            const headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cache-Control': 'no-cache'
+            };
+
+            // 某些网站需要Referer
+            try {
+                const logoUrlObj = new URL(logoUrl);
+                headers['Referer'] = `${logoUrlObj.protocol}//${logoUrlObj.hostname}`;
+            } catch (e) {
+                // Ignore referer setting errors
+            }
+
+            const response = await fetch(logoUrl, {
+                method: 'GET',
+                headers: headers,
+                mode: 'cors',
+                credentials: 'omit'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            console.log('Logo内容类型:', contentType);
+
+            // 检查是否是图片类型
+            if (!contentType || !contentType.startsWith('image/')) {
+                throw new Error(`Invalid content type: ${contentType || 'unknown'}`);
+            }
+
+            const blob = await response.blob();
+
+            // 检查文件大小（避免过大的文件）
+            if (blob.size > 5 * 1024 * 1024) { // 5MB limit
+                throw new Error(`Logo文件过大: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+            }
+
+            console.log(`Logo获取成功，大小: ${(blob.size / 1024).toFixed(2)}KB`);
+
+            // Convert blob to data URL
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    console.log('Logo转换为DataURL成功');
+                    resolve(reader.result);
+                };
+                reader.onerror = () => {
+                    const error = new Error('Failed to convert logo to data URL');
+                    console.error('DataURL转换失败:', error);
+                    reject(error);
+                };
+                reader.readAsDataURL(blob);
+            });
+
+        } catch (error) {
+            lastError = error;
+            console.error(`Logo获取失败 (第${attempt + 1}次):`, error.message);
+
+            if (attempt < maxRetries) {
+                // 等待后重试
+                await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            }
+        }
+    }
+
+    console.error('Logo获取最终失败:', lastError.message);
+    throw new Error(`Unable to fetch logo after ${maxRetries + 1} attempts: ${lastError.message}`);
+}
+
+/**
+ * Extract logos from document with improved detection
+ * @param {Document} doc Parsed HTML document
+ * @param {string} baseUrl Base URL for resolving relative URLs
+ * @returns {Array<string>} Array of logo URLs
+ */
+function extractLogos(doc, baseUrl) {
+    const logoUrls = [];
+    const foundUrls = new Set();
+
+    // 1. 首先检查 favicon 和网站图标
+    const iconSelectors = [
+        'link[rel="icon"]',
+        'link[rel="shortcut icon"]',
+        'link[rel="apple-touch-icon"]',
+        'link[rel="apple-touch-icon-precomposed"]',
+        'meta[property="og:image"]',
+        'meta[name="twitter:image"]'
+    ];
+
+    iconSelectors.forEach(selector => {
+        const elements = doc.querySelectorAll(selector);
+        elements.forEach(el => {
+            const href = el.getAttribute('href') || el.getAttribute('content');
+            if (href) {
+                try {
+                    const absoluteUrl = new URL(href, baseUrl).href;
+                    if (!foundUrls.has(absoluteUrl)) {
+                        foundUrls.add(absoluteUrl);
+                        logoUrls.push(absoluteUrl);
+                    }
+                } catch (e) {
+                    // Ignore invalid URLs
+                }
+            }
+        });
+    });
+
+    // 2. 扩展的logo选择器
+    const logoSelectors = [
+        // 直接logo相关
+        'img[alt*="logo" i]',
+        'img[src*="logo" i]',
+        'img[class*="logo" i]',
+        'img[id*="logo" i]',
+
+        // 容器中的logo
+        '.logo img', '#logo img',
+        '.site-logo img', '.site-brand img',
+        '.brand img', '.brand-logo img',
+        '.navbar-brand img', '.header-logo img',
+
+        // 语义化标签
+        'header img[alt*="logo" i]',
+        'nav img[alt*="logo" i]',
+        '.navbar img[alt*="logo" i]',
+        '.header img[alt*="logo" i]',
+
+        // 常见class名
+        '.company-logo img',
+        '.organization-logo img',
+        '.site-identity img',
+        '.masthead img',
+
+        // SVG logo
+        'svg[class*="logo" i]',
+        'svg[id*="logo" i]',
+        '.logo svg',
+        '#logo svg'
+    ];
+
+    logoSelectors.forEach(selector => {
+        const elements = doc.querySelectorAll(selector);
+        elements.forEach(el => {
+            let src = null;
+
+            if (el.tagName.toLowerCase() === 'img') {
+                src = el.getAttribute('src') || el.getAttribute('data-src');
+            } else if (el.tagName.toLowerCase() === 'svg') {
+                // For SVG, we'll skip for now as it's more complex to handle
+                return;
+            }
+
+            if (src) {
+                try {
+                    const absoluteUrl = new URL(src, baseUrl).href;
+                    if (!foundUrls.has(absoluteUrl)) {
+                        foundUrls.add(absoluteUrl);
+                        logoUrls.push(absoluteUrl);
+                    }
+                } catch (e) {
+                    // Ignore invalid URLs
+                }
+            }
+        });
+    });
+
+    // 3. 智能检测：在header区域查找最大的图片（通常是logo）
+    const headerArea = doc.querySelector('header, .header, .navbar, .nav, .masthead, .site-header');
+    if (headerArea) {
+        const headerImages = headerArea.querySelectorAll('img');
+        headerImages.forEach(img => {
+            const src = img.getAttribute('src') || img.getAttribute('data-src');
+            if (src) {
+                try {
+                    const absoluteUrl = new URL(src, baseUrl).href;
+                    if (!foundUrls.has(absoluteUrl)) {
+                        foundUrls.add(absoluteUrl);
+                        logoUrls.push(absoluteUrl);
+                    }
+                } catch (e) {
+                    // Ignore invalid URLs
+                }
+            }
+        });
+    }
+
+    // 4. 按质量排序（优先级：明确的logo > header区域图片 > 图标）
+    return prioritizeLogos(logoUrls, baseUrl);
+}
+
+/**
+ * Prioritize logos by quality and relevance
+ * @param {Array<string>} logoUrls Array of logo URLs
+ * @param {string} baseUrl Base URL for scoring
+ * @returns {Array<string>} Sorted array of logo URLs
+ */
+function prioritizeLogos(logoUrls, baseUrl) {
+    return logoUrls.sort((a, b) => {
+        const scoreA = calculateLogoScore(a, baseUrl);
+        const scoreB = calculateLogoScore(b, baseUrl);
+        return scoreB - scoreA; // Higher score first
+    });
+}
+
+/**
+ * Calculate logo quality score
+ * @param {string} logoUrl Logo URL
+ * @param {string} baseUrl Base URL
+ * @returns {number} Score (higher is better)
+ */
+function calculateLogoScore(logoUrl, baseUrl) {
+    let score = 0;
+
+    // 优先本域名的图片
+    try {
+        const logoHost = new URL(logoUrl).hostname;
+        const baseHost = new URL(baseUrl).hostname;
+        if (logoHost === baseHost || logoHost.includes(baseHost.replace('www.', ''))) {
+            score += 20;
+        }
+    } catch (e) {
+        // Ignore URL parsing errors
+    }
+
+    // 文件名包含logo关键词
+    const filename = logoUrl.toLowerCase();
+    if (filename.includes('logo')) score += 15;
+    if (filename.includes('brand')) score += 10;
+    if (filename.includes('icon')) score += 5;
+
+    // 文件格式偏好（SVG > PNG > JPG > ICO）
+    if (filename.includes('.svg')) score += 10;
+    else if (filename.includes('.png')) score += 8;
+    else if (filename.includes('.jpg') || filename.includes('.jpeg')) score += 6;
+    else if (filename.includes('.ico')) score += 3;
+
+    // 排除明显不是logo的图片
+    if (filename.includes('avatar')) score -= 10;
+    if (filename.includes('background')) score -= 10;
+    if (filename.includes('banner')) score -= 5;
+
+    return score;
+}
 
 /**
  * Fetch website content
@@ -104,34 +377,8 @@ function extractRelevantContent(html, url) {
         .map(h => h.textContent.trim())
         .filter(text => text.length > 0);
 
-    // Extract possible logos
-    const logoSelectors = [
-        'img[alt*="logo" i]',
-        'img[src*="logo" i]',
-        'img[class*="logo" i]',
-        '.logo img',
-        '#logo img',
-        '[class*="brand"] img',
-        'header img[src*="logo" i]',
-        '.navbar-brand img',
-        '.site-logo img'
-    ];
-
-    logoSelectors.forEach(selector => {
-        const logoEls = doc.querySelectorAll(selector);
-        logoEls.forEach(img => {
-            const src = img.getAttribute('src');
-            if (src && !extractedInfo.logoUrls.includes(src)) {
-                // Convert relative URL to absolute URL
-                try {
-                    const absoluteUrl = new URL(src, url).href;
-                    extractedInfo.logoUrls.push(absoluteUrl);
-                } catch (e) {
-                    // Ignore invalid URLs
-                }
-            }
-        });
-    });
+    // Extract possible logos with improved detection
+    extractedInfo.logoUrls = extractLogos(doc, url);
 
     // Extract main text content
     const textElements = doc.querySelectorAll('p, .description, .about, .intro, [class*="desc"]');
