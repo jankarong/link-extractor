@@ -31,9 +31,10 @@ class SidePanelApp {
         // AI分析按钮
         document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeWebsite());
 
-        // Logo上传
+        // Logo上传与下载
         document.getElementById('uploadLogoBtn').addEventListener('click', () => this.triggerLogoUpload());
         document.getElementById('logoUpload').addEventListener('change', (e) => this.handleLogoUpload(e));
+        document.getElementById('downloadLogoBtn').addEventListener('click', () => this.downloadLogo());
 
         // 网页截图/上传
         const captureBtn = document.getElementById('captureScreenshotBtn');
@@ -396,6 +397,32 @@ class SidePanelApp {
 
     async delay(ms) {
         return new Promise((r) => setTimeout(r, ms));
+    }
+
+    downloadLogo() {
+        try {
+            if (!this.currentProduct.logo) {
+                const text = (window.langManager && window.langManager.getText('noLogo')) || '未选择Logo';
+                this.showMessage(text, 'error');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = this.currentProduct.logo;
+            const productName = this.currentProduct.productName || 'logo';
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.download = `${productName}-logo-${timestamp}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            const successText = (window.langManager && window.langManager.getText('logoDownloaded')) || 'Logo已下载';
+            this.showMessage(successText, 'success');
+        } catch (error) {
+            console.error('下载Logo失败:', error);
+            const errorText = (window.langManager && window.langManager.getText('downloadLogoFailed')) || '下载Logo失败';
+            this.showMessage(errorText, 'error');
+        }
     }
 
     downloadScreenshot() {

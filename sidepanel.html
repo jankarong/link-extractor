@@ -44,12 +44,15 @@
 
         <!-- 产品信息预览区 -->
         <div class="product-info" id="productInfo">
-            <div class="logo-section">
+            <div class="logo-section" style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
                 <div class="logo-container" id="logoContainer">
                     <div class="logo-placeholder" data-i18n="noLogo">未选择Logo</div>
                 </div>
                 <input type="file" id="logoUpload" accept="image/*" class="hidden">
-                <button id="uploadLogoBtn" class="upload-btn" data-i18n="uploadLogo">上传Logo</button>
+                <div style="display:flex; gap:8px;">
+                    <button id="uploadLogoBtn" class="upload-btn" data-i18n="uploadLogo">上传Logo</button>
+                    <button id="downloadLogoBtn" class="upload-btn" data-i18n="downloadLogo">下载Logo</button>
+                </div>
             </div>
 
             <div class="screenshot-section" style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
