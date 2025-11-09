@@ -145,32 +145,59 @@ class GeminiAPI {
 
     // 辅助方法：从文本中提取JSON对象
     _extractJSON(text) {
-        // 尝试找到完整的JSON对象
+        // 尝试找到完整的JSON对象，正确处理字符串中的括号
         let braceCount = 0;
         let jsonStart = -1;
         let jsonEnd = -1;
+        let inString = false;
+        let escapeNext = false;
 
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
 
-            if (char === '{') {
-                if (jsonStart === -1) {
-                    jsonStart = i;
-                }
-                braceCount++;
-            } else if (char === '}') {
-                braceCount--;
-                if (braceCount === 0 && jsonStart !== -1) {
-                    jsonEnd = i + 1;
-                    break;
+            // 处理转义字符
+            if (escapeNext) {
+                escapeNext = false;
+                continue;
+            }
+
+            // 处理字符串转义
+            if (char === '\\') {
+                escapeNext = true;
+                continue;
+            }
+
+            // 切换字符串状态
+            if (char === '"') {
+                inString = !inString;
+                continue;
+            }
+
+            // 只在字符串外统计括号
+            if (!inString) {
+                if (char === '{') {
+                    if (jsonStart === -1) {
+                        jsonStart = i;
+                    }
+                    braceCount++;
+                } else if (char === '}') {
+                    braceCount--;
+                    if (braceCount === 0 && jsonStart !== -1) {
+                        jsonEnd = i + 1;
+                        break;
+                    }
                 }
             }
         }
 
         if (jsonStart !== -1 && jsonEnd !== -1) {
-            return text.substring(jsonStart, jsonEnd);
+            const extracted = text.substring(jsonStart, jsonEnd);
+            console.log('[GeminiAPI] Extracted JSON length:', extracted.length);
+            return extracted;
         }
 
+        console.warn('[GeminiAPI] Could not extract valid JSON from response');
+        console.warn('[GeminiAPI] Response text (first 300 chars):', text.substring(0, 300));
         return null;
     }
 
@@ -264,9 +291,19 @@ Requirements:
             console.error('[GeminiAPI] Website analysis failed:', {
                 message: error.message,
                 url: url,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                errorStack: error.stack
             });
-            throw new Error(`Website analysis failed: ${error.message}`);
+
+            // 提供更详细的错误信息，帮助用户理解问题
+            let userMessage = error.message;
+            if (error.message.includes('No valid JSON object found')) {
+                userMessage = 'Gemini API响应格式不正确。这可能是由于：1) API返回了意外内容，2) 网络连接问题，3) API服务异常。请检查您的API Key并重试。';
+            } else if (error.message.includes('Parsed JSON is not a valid object')) {
+                userMessage = 'API返回的JSON格式无效。请重试或检查网络连接。';
+            }
+
+            throw new Error(userMessage);
         }
     }
 
