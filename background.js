@@ -129,6 +129,32 @@ function extractLogos(doc, baseUrl) {
     const logoUrls = [];
     const foundUrls = new Set();
 
+    // 辅助函数：尝试多种相对路径解析方式
+    const resolveLogoUrl = (href, baseUrl) => {
+        try {
+            // 首先尝试标准相对路径解析
+            let absoluteUrl = new URL(href, baseUrl).href;
+            return absoluteUrl;
+        } catch (e) {
+            // 如果标准解析失败，尝试其他方式
+            try {
+                const baseUrlObj = new URL(baseUrl);
+                const basePathParts = baseUrlObj.pathname.split('/').filter(p => p);
+
+                // 对于子页面，尝试向上一级目录
+                if (href.startsWith('./') || href.startsWith('../')) {
+                    // 移除子页面文件名，保留目录路径
+                    const dirPath = baseUrlObj.pathname.substring(0, baseUrlObj.pathname.lastIndexOf('/'));
+                    const testUrl = new URL(href, `${baseUrlObj.protocol}//${baseUrlObj.host}${dirPath}/`);
+                    return testUrl.href;
+                }
+            } catch (e2) {
+                // Ignore fallback errors
+            }
+        }
+        return null;
+    };
+
     // 1. 首先检查 favicon 和网站图标
     const iconSelectors = [
         'link[rel="icon"]',
@@ -144,14 +170,10 @@ function extractLogos(doc, baseUrl) {
         elements.forEach(el => {
             const href = el.getAttribute('href') || el.getAttribute('content');
             if (href) {
-                try {
-                    const absoluteUrl = new URL(href, baseUrl).href;
-                    if (!foundUrls.has(absoluteUrl)) {
-                        foundUrls.add(absoluteUrl);
-                        logoUrls.push(absoluteUrl);
-                    }
-                } catch (e) {
-                    // Ignore invalid URLs
+                const absoluteUrl = resolveLogoUrl(href, baseUrl);
+                if (absoluteUrl && !foundUrls.has(absoluteUrl)) {
+                    foundUrls.add(absoluteUrl);
+                    logoUrls.push(absoluteUrl);
                 }
             }
         });
@@ -203,14 +225,10 @@ function extractLogos(doc, baseUrl) {
             }
 
             if (src) {
-                try {
-                    const absoluteUrl = new URL(src, baseUrl).href;
-                    if (!foundUrls.has(absoluteUrl)) {
-                        foundUrls.add(absoluteUrl);
-                        logoUrls.push(absoluteUrl);
-                    }
-                } catch (e) {
-                    // Ignore invalid URLs
+                const absoluteUrl = resolveLogoUrl(src, baseUrl);
+                if (absoluteUrl && !foundUrls.has(absoluteUrl)) {
+                    foundUrls.add(absoluteUrl);
+                    logoUrls.push(absoluteUrl);
                 }
             }
         });
@@ -223,14 +241,10 @@ function extractLogos(doc, baseUrl) {
         headerImages.forEach(img => {
             const src = img.getAttribute('src') || img.getAttribute('data-src');
             if (src) {
-                try {
-                    const absoluteUrl = new URL(src, baseUrl).href;
-                    if (!foundUrls.has(absoluteUrl)) {
-                        foundUrls.add(absoluteUrl);
-                        logoUrls.push(absoluteUrl);
-                    }
-                } catch (e) {
-                    // Ignore invalid URLs
+                const absoluteUrl = resolveLogoUrl(src, baseUrl);
+                if (absoluteUrl && !foundUrls.has(absoluteUrl)) {
+                    foundUrls.add(absoluteUrl);
+                    logoUrls.push(absoluteUrl);
                 }
             }
         });
