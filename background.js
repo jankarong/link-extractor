@@ -420,37 +420,68 @@ function extractRelevantContent(html, url) {
     // Extract possible logos with improved detection
     extractedInfo.logoUrls = extractLogos(doc, url);
 
-    // Extract main text content - 改进选择器以捕捉更多内容
-    const textSelectors = [
-        'p',
-        '.description',
-        '.about',
-        '.intro',
-        '[class*="desc"]',
-        '[class*="content"]',
-        '[class*="feature"]',
-        'article',
+    // Extract main text content - 优先级方式提取，避免重复
+    let textContent = '';
+
+    // 优先级1：尝试从明确的容器中提取
+    const mainContentSelectors = [
         'main',
-        '[role="main"]'
+        'article',
+        '[role="main"]',
+        '.main-content',
+        '.content',
+        '#content'
     ];
 
-    const textElements = [];
-    for (const selector of textSelectors) {
+    for (const selector of mainContentSelectors) {
         try {
-            const elements = doc.querySelectorAll(selector);
-            textElements.push(...elements);
+            const element = doc.querySelector(selector);
+            if (element) {
+                textContent = element.textContent.trim();
+                if (textContent.length > 100) {
+                    break; // 找到足够内容就停止
+                }
+            }
         } catch (e) {
-            // 跳过无效的选择器
+            // 继续
         }
     }
 
-    const textContent = Array.from(textElements)
-        .map(el => el.textContent.trim())
-        .filter(text => text.length > 20) // Filter out text that's too short
-        .slice(0, 15) // Take first 15 text blocks
-        .join(' ');
+    // 优先级2：如果没有找到足够内容，从段落中收集
+    if (textContent.length < 100) {
+        const paragraphs = Array.from(doc.querySelectorAll('p'))
+            .map(p => p.textContent.trim())
+            .filter(text => text.length > 20)
+            .slice(0, 5);
+        textContent = paragraphs.join(' ');
+    }
 
-    extractedInfo.text = textContent.substring(0, 1500); // Limit length - 增加限制以包含更多内容
+    // 优先级3：最后尝试其他容器
+    if (textContent.length < 100) {
+        const otherSelectors = [
+            '.description',
+            '.about',
+            '.intro',
+            '[class*="desc"]'
+        ];
+
+        for (const selector of otherSelectors) {
+            try {
+                const elements = Array.from(doc.querySelectorAll(selector))
+                    .map(el => el.textContent.trim())
+                    .filter(text => text.length > 20)
+                    .slice(0, 3);
+                if (elements.length > 0) {
+                    textContent = textContent ? textContent + ' ' + elements.join(' ') : elements.join(' ');
+                    break;
+                }
+            } catch (e) {
+                // 继续
+            }
+        }
+    }
+
+    extractedInfo.text = textContent.substring(0, 1200); // 合理的限制
 
     // Format output
     let formattedContent = `Website Title: ${extractedInfo.title}\n`;
