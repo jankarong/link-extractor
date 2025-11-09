@@ -717,7 +717,8 @@ class SidePanelApp {
         const product = this.savedProducts.find(p => p.id === productId);
         if (!product) return;
 
-        this.currentProduct = { ...product };
+        // 深拷贝产品数据，确保不会共享引用
+        this.currentProduct = JSON.parse(JSON.stringify(product));
         this.updateUI();
         const text = (window.langManager && window.langManager.getText('productLoaded')) || '产品信息已加载';
         this.showMessage(text, 'success');
