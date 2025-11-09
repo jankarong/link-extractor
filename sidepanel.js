@@ -549,9 +549,10 @@ class SidePanelApp {
 
             // 执行自动保存
             const productId = Date.now().toString();
+            // 使用深拷贝确保每个产品都有独立的数据副本
             const productToSave = {
                 id: productId,
-                ...this.currentProduct,
+                ...JSON.parse(JSON.stringify(this.currentProduct)),
                 createdAt: new Date().toISOString(),
                 autoSaved: true // 标记为自动保存
             };
@@ -577,9 +578,10 @@ class SidePanelApp {
         }
 
         const productId = Date.now().toString();
+        // 使用深拷贝确保每个产品都有独立的数据副本
         const productToSave = {
             id: productId,
-            ...this.currentProduct,
+            ...JSON.parse(JSON.stringify(this.currentProduct)),
             createdAt: new Date().toISOString()
         };
 
