@@ -372,10 +372,36 @@ function extractRelevantContent(html, url) {
         extractedInfo.title = titleEl.textContent.trim();
     }
 
-    // Extract meta description
-    const descriptionMeta = doc.querySelector('meta[name="description"], meta[property="og:description"]');
+    // Extract meta description - 尝试多个来源
+    let descriptionMeta = doc.querySelector('meta[name="description"]');
+    if (!descriptionMeta) {
+        descriptionMeta = doc.querySelector('meta[property="og:description"]');
+    }
     if (descriptionMeta) {
         extractedInfo.description = descriptionMeta.getAttribute('content') || '';
+    }
+
+    // 如果没有找到meta description，尝试从Schema.org结构化数据中提取
+    if (!extractedInfo.description) {
+        try {
+            const schemaScripts = doc.querySelectorAll('script[type="application/ld+json"]');
+            for (const script of schemaScripts) {
+                try {
+                    const schema = JSON.parse(script.textContent);
+                    // 查找description或name字段
+                    if (schema.description) {
+                        extractedInfo.description = schema.description;
+                        break;
+                    } else if (schema.name && !extractedInfo.title) {
+                        extractedInfo.title = schema.name;
+                    }
+                } catch (e) {
+                    // 继续下一个schema
+                }
+            }
+        } catch (e) {
+            console.warn('Schema.org parsing error:', e.message);
+        }
     }
 
     // Extract keywords
@@ -394,15 +420,37 @@ function extractRelevantContent(html, url) {
     // Extract possible logos with improved detection
     extractedInfo.logoUrls = extractLogos(doc, url);
 
-    // Extract main text content
-    const textElements = doc.querySelectorAll('p, .description, .about, .intro, [class*="desc"]');
+    // Extract main text content - 改进选择器以捕捉更多内容
+    const textSelectors = [
+        'p',
+        '.description',
+        '.about',
+        '.intro',
+        '[class*="desc"]',
+        '[class*="content"]',
+        '[class*="feature"]',
+        'article',
+        'main',
+        '[role="main"]'
+    ];
+
+    const textElements = [];
+    for (const selector of textSelectors) {
+        try {
+            const elements = doc.querySelectorAll(selector);
+            textElements.push(...elements);
+        } catch (e) {
+            // 跳过无效的选择器
+        }
+    }
+
     const textContent = Array.from(textElements)
-        .slice(0, 10) // Take only first 10 paragraphs
         .map(el => el.textContent.trim())
         .filter(text => text.length > 20) // Filter out text that's too short
+        .slice(0, 15) // Take first 15 text blocks
         .join(' ');
 
-    extractedInfo.text = textContent.substring(0, 1000); // Limit length
+    extractedInfo.text = textContent.substring(0, 1500); // Limit length - 增加限制以包含更多内容
 
     // Format output
     let formattedContent = `Website Title: ${extractedInfo.title}\n`;
