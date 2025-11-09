@@ -123,7 +123,25 @@ class SidePanelApp {
 
         } catch (error) {
             console.error('AI分析失败:', error);
-            this.showMessage('AI分析失败，请检查网络连接和API Key', 'error');
+
+            // 根据错误类型提供更详细的诊断信息
+            let errorMessage = 'AI分析失败，请检查网络连接和API Key';
+
+            if (error.message.includes('401') || error.message.includes('403')) {
+                errorMessage = 'API Key无效或已过期，请检查设置中的API Key';
+            } else if (error.message.includes('429')) {
+                errorMessage = 'API请求过于频繁，请稍后再试';
+            } else if (error.message.includes('50')) {
+                errorMessage = 'Gemini API服务器故障，请稍后重试';
+            } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                errorMessage = '网络连接失败，请检查互联网连接';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = '请求超时，网络可能较慢，请重试';
+            } else if (error.message.includes('JSON')) {
+                errorMessage = 'AI返回的数据格式错误，请重试或联系开发者';
+            }
+
+            this.showMessage(errorMessage, 'error');
         } finally {
             this.showLoading(false);
         }

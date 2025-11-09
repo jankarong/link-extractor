@@ -5,67 +5,173 @@ class GeminiAPI {
         this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     }
 
-    async generateContent(prompt, model = 'gemini-2.5-flash') {
-        try {
-            const response = await fetch(`${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 1024,
+    async generateContent(prompt, model = 'gemini-2.5-flash', retries = 3) {
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                console.log(`[GeminiAPI] Attempt ${attempt}/${retries} - Calling ${model}`);
+
+                const response = await fetch(`${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
                     },
-                    safetySettings: [
-                        {
-                            category: "HARM_CATEGORY_HARASSMENT",
-                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            topK: 40,
+                            topP: 0.95,
+                            maxOutputTokens: 1024,
                         },
-                        {
-                            category: "HARM_CATEGORY_HATE_SPEECH",
-                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                        },
-                        {
-                            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                        },
-                        {
-                            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                        }
-                    ]
-                })
-            });
+                        safetySettings: [
+                            {
+                                category: "HARM_CATEGORY_HARASSMENT",
+                                threshold: "BLOCK_ONLY_HIGH"
+                            },
+                            {
+                                category: "HARM_CATEGORY_HATE_SPEECH",
+                                threshold: "BLOCK_ONLY_HIGH"
+                            },
+                            {
+                                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                threshold: "BLOCK_ONLY_HIGH"
+                            },
+                            {
+                                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                threshold: "BLOCK_ONLY_HIGH"
+                            }
+                        ]
+                    })
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || response.statusText}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error?.message || response.statusText;
+                    const statusCode = response.status;
+
+                    lastError = new Error(`API returned ${statusCode}: ${errorMsg}`);
+                    console.warn(`[GeminiAPI] Attempt ${attempt} failed:`, {
+                        status: statusCode,
+                        message: errorMsg,
+                        willRetry: attempt < retries
+                    });
+
+                    // 只在非身份验证错误时重试
+                    if (statusCode === 401 || statusCode === 403) {
+                        throw lastError; // 不重试身份验证错误
+                    }
+
+                    if (attempt < retries) {
+                        // 指数退避：第1次等待1秒，第2次等待2秒
+                        const waitTime = Math.pow(2, attempt - 1) * 1000;
+                        console.log(`[GeminiAPI] Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        continue;
+                    }
+
+                    throw lastError;
+                }
+
+                const data = await response.json();
+
+                // 检查API是否因安全过滤而拒绝生成内容
+                if (!data.candidates || data.candidates.length === 0) {
+                    lastError = new Error('API blocked content due to safety filters');
+                    console.warn(`[GeminiAPI] Attempt ${attempt} - Content blocked by safety filters`);
+
+                    if (attempt < retries) {
+                        const waitTime = Math.pow(2, attempt - 1) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        continue;
+                    }
+
+                    throw lastError;
+                }
+
+                const candidate = data.candidates[0];
+
+                // 检查是否有内容
+                if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+                    lastError = new Error('API response missing content');
+                    console.warn(`[GeminiAPI] Attempt ${attempt} - Missing content in response`);
+
+                    if (attempt < retries) {
+                        const waitTime = Math.pow(2, attempt - 1) * 1000;
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        continue;
+                    }
+
+                    throw lastError;
+                }
+
+                const content = candidate.content.parts[0].text;
+                console.log(`[GeminiAPI] Success on attempt ${attempt}`);
+
+                return {
+                    text: content,
+                    raw: data,
+                    attempt: attempt
+                };
+
+            } catch (error) {
+                lastError = error;
+                console.error(`[GeminiAPI] Attempt ${attempt} error:`, {
+                    message: error.message,
+                    stack: error.stack.split('\n')[0]
+                });
+
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    throw error; // 立即抛出身份验证错误
+                }
+
+                if (attempt < retries) {
+                    const waitTime = Math.pow(2, attempt - 1) * 1000;
+                    console.log(`[GeminiAPI] Waiting ${waitTime}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                } else {
+                    throw lastError;
+                }
             }
-
-            const data = await response.json();
-
-            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-                throw new Error('API returned invalid data format');
-            }
-
-            const content = data.candidates[0].content.parts[0].text;
-            return {
-                text: content,
-                raw: data
-            };
-
-        } catch (error) {
-            console.error('Gemini API call failed:', error);
-            throw error;
         }
+
+        throw lastError || new Error('All retry attempts failed');
+    }
+
+    // 辅助方法：从文本中提取JSON对象
+    _extractJSON(text) {
+        // 尝试找到完整的JSON对象
+        let braceCount = 0;
+        let jsonStart = -1;
+        let jsonEnd = -1;
+
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+
+            if (char === '{') {
+                if (jsonStart === -1) {
+                    jsonStart = i;
+                }
+                braceCount++;
+            } else if (char === '}') {
+                braceCount--;
+                if (braceCount === 0 && jsonStart !== -1) {
+                    jsonEnd = i + 1;
+                    break;
+                }
+            }
+        }
+
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+            return text.substring(jsonStart, jsonEnd);
+        }
+
+        return null;
     }
 
     async analyzeWebsite(websiteContent, url, contentLanguage = 'en') {
@@ -123,31 +229,43 @@ Requirements:
 
         try {
             const result = await this.generateContent(prompt);
+            console.log('[GeminiAPI] Raw API response:', result.text.substring(0, 200));
 
-            // Try to parse JSON
-            const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                const analysis = JSON.parse(jsonMatch[0]);
-
-                // Validate returned data structure
-                if (typeof analysis === 'object' && analysis !== null) {
-                    return {
-                        productName: analysis.productName || '',
-                        website: analysis.website || url, // If AI doesn't return, use input URL
-                        tagline: analysis.tagline || '',
-                        description: analysis.description || '',
-                        features: analysis.features || '',
-                        category: analysis.category || '',
-                        comment: analysis.comment || '',
-                        logoUrl: analysis.logoUrl || ''
-                    };
-                }
+            // 使用改进的JSON提取方法
+            const jsonString = this._extractJSON(result.text);
+            if (!jsonString) {
+                throw new Error('No valid JSON object found in API response');
             }
 
-            throw new Error('AI returned invalid data format');
+            console.log('[GeminiAPI] Extracted JSON string:', jsonString.substring(0, 200));
+
+            const analysis = JSON.parse(jsonString);
+
+            // 验证返回的数据结构
+            if (typeof analysis === 'object' && analysis !== null) {
+                const validatedData = {
+                    productName: analysis.productName || '',
+                    website: analysis.website || url,
+                    tagline: analysis.tagline || '',
+                    description: analysis.description || '',
+                    features: analysis.features || '',
+                    category: analysis.category || '',
+                    comment: analysis.comment || '',
+                    logoUrl: analysis.logoUrl || ''
+                };
+
+                console.log('[GeminiAPI] Analysis completed successfully:', validatedData.productName);
+                return validatedData;
+            }
+
+            throw new Error('Parsed JSON is not a valid object');
 
         } catch (error) {
-            console.error('Website analysis failed:', error);
+            console.error('[GeminiAPI] Website analysis failed:', {
+                message: error.message,
+                url: url,
+                timestamp: new Date().toISOString()
+            });
             throw new Error(`Website analysis failed: ${error.message}`);
         }
     }
